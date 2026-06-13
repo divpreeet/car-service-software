@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}{{ estimate.estimate_number }} - Car Service Software{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1>Estimate <span class="invoice-number">{{ estimate.estimate_number }}</span></h1>
+        <p class="text-muted">Created on {{ estimate.created_at.strftime('%B %d, %Y') }}</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ url_for('estimates.edit_estimate', estimate_id=estimate.id) }}" class="btn btn-warning">Edit</a>
+        {% if estimate.status != 'converted' %}
+        <form method="post" action="{{ url_for('estimates.convert_to_invoice', estimate_id=estimate.id) }}" style="display:inline;">
+            <button type="submit" class="btn btn-success">Convert to Invoice</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header">Customer Information</div>
+            <div class="card-body">
+                <p><strong>Name:</strong> {{ estimate.customer.name }}</p>
+                <p><strong>Email:</strong> {{ estimate.customer.email or 'N/A' }}</p>
+                <p><strong>Phone:</strong> {{ estimate.customer.phone or 'N/A' }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header">Estimate Details</div>
+            <div class="card-body">
+                <p><strong>Status:</strong> <span class="badge bg-secondary">{{ estimate.status|title }}</span></p>
+                <p><strong>Valid Until:</strong> {{ estimate.valid_until.strftime('%B %d, %Y') if estimate.valid_until else 'N/A' }}</p>
+                <p><strong>Tax Rate:</strong> {{ (estimate.tax_rate * 100)|int }}%</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card mb-3">
+            <div class="card-header">Line Items</div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Description</th>
+                                <th>Type</th>
+                                <th class="text-end">Quantity</th>
+                                <th class="text-end">Unit Price</th>
+                                <th class="text-end">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in estimate.line_items %}
+                            <tr>
+                                <td>{{ item.description }}</td>
+                                <td><span class="badge bg-light text-dark">{{ item.item_type|title }}</span></td>
+                                <td class="text-end">{{ item.quantity }}</td>
+                                <td class="text-end">${{ "%.2f"|format(item.unit_price) }}</td>
+                                <td class="text-end"><strong>${{ "%.2f"|format(item.total) }}</strong></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4 offset-md-8">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Subtotal:</span>
+                    <strong>${{ "%.2f"|format(estimate.subtotal) }}</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Tax ({{ (estimate.tax_rate * 100)|int }}%):</span>
+                    <strong>${{ "%.2f"|format(estimate.tax_amount) }}</strong>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between" style="font-size: 1.25rem;">
+                    <span>Total:</span>
+                    <strong>${{ "%.2f"|format(estimate.total) }}</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if estimate.notes %}
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">Notes</div>
+            <div class="card-body">
+                {{ estimate.notes }}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Estimates - Car Service Software{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1>Estimates</h1>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ url_for('estimates.create_estimate') }}" class="btn btn-primary">+ New Estimate</a>
+    </div>
+</div>
+
+<div class="row mb-3">
+    <div class="col-md-12">
+        <div class="btn-group" role="group">
+            <a href="{{ url_for('estimates.list_estimates') }}" class="btn btn-outline-secondary {% if not status %}active{% endif %}">All</a>
+            <a href="{{ url_for('estimates.list_estimates', status='draft') }}" class="btn btn-outline-secondary {% if status == 'draft' %}active{% endif %}">Draft</a>
+            <a href="{{ url_for('estimates.list_estimates', status='approved') }}" class="btn btn-outline-secondary {% if status == 'approved' %}active{% endif %}">Approved</a>
+            <a href="{{ url_for('estimates.list_estimates', status='converted') }}" class="btn btn-outline-secondary {% if status == 'converted' %}active{% endif %}">Converted</a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        {% if estimates.items %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Estimate #</th>
+                        <th>Customer</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>Valid Until</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for estimate in estimates.items %}
+                    <tr>
+                        <td><strong>{{ estimate.estimate_number }}</strong></td>
+                        <td>{{ estimate.customer.name }}</td>
+                        <td>${{ "%.2f"|format(estimate.total) }}</td>
+                        <td><span class="badge bg-secondary">{{ estimate.status|title }}</span></td>
+                        <td>{{ estimate.valid_until.strftime('%m/%d/%Y') if estimate.valid_until else '-' }}</td>
+                        <td>{{ estimate.created_at.strftime('%m/%d/%Y') }}</td>
+                        <td>
+                            <a href="{{ url_for('estimates.view_estimate', estimate_id=estimate.id) }}" class="btn btn-sm btn-info">View</a>
+                            <a href="{{ url_for('estimates.edit_estimate', estimate_id=estimate.id) }}" class="btn btn-sm btn-warning">Edit</a>
+                            {% if estimate.status != 'converted' %}
+                            <form method="post" action="{{ url_for('estimates.convert_to_invoice', estimate_id=estimate.id) }}" style="display:inline;">
+                                <button type="submit" class="btn btn-sm btn-success">Convert</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info">No estimates found. <a href="{{ url_for('estimates.create_estimate') }}">Create your first estimate</a></div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

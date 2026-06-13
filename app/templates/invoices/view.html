@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block title %}{{ invoice.invoice_number }} - Car Service Software{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1>Invoice <span class="invoice-number">{{ invoice.invoice_number }}</span></h1>
+        <p class="text-muted">Issue Date: {{ invoice.issue_date.strftime('%B %d, %Y') }}</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ url_for('invoices.edit_invoice', invoice_id=invoice.id) }}" class="btn btn-warning">Edit</a>
+        {% if invoice.status == 'draft' %}
+        <form method="post" action="{{ url_for('invoices.mark_sent', invoice_id=invoice.id) }}" style="display:inline;">
+            <button type="submit" class="btn btn-success">Mark as Sent</button>
+        </form>
+        {% endif %}
+        {% if invoice.balance_due > 0 %}
+        <a href="{{ url_for('payments.record_payment', invoice_id=invoice.id) }}" class="btn btn-primary">Record Payment</a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header">From</div>
+            <div class="card-body">
+                <p><strong>Your Business</strong></p>
+                <p class="text-muted">Service Provider Information</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header">Bill To</div>
+            <div class="card-body">
+                <p><strong>{{ invoice.customer.name }}</strong></p>
+                <p>{{ invoice.customer.address or '' }}</p>
+                <p>{{ invoice.customer.city or '' }}, {{ invoice.customer.state or '' }} {{ invoice.customer.zip_code or '' }}</p>
+                <p>{{ invoice.customer.email or '' }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card mb-3">
+            <div class="card-header">Invoice Details</div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <p><strong>Status:</strong><br>
+                        {% if invoice.status == 'paid' %}
+                            <span class="badge bg-success">Paid</span>
+                        {% elif invoice.status == 'overdue' %}
+                            <span class="badge bg-danger">Overdue</span>
+                        {% elif invoice.status == 'partially_paid' %}
+                            <span class="badge bg-warning">Partially Paid</span>
+                        {% else %}
+                            <span class="badge bg-secondary">{{ invoice.status|title }}</span>
+                        {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-md-3">
+                        <p><strong>Due Date:</strong><br>{{ invoice.due_date.strftime('%B %d, %Y') if invoice.due_date else 'N/A' }}</p>
+                    </div>
+                    <div class="col-md-3">
+                        <p><strong>Payment Terms:</strong><br>{{ invoice.payment_terms or 'N/A' }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card mb-3">
+            <div class="card-header">Line Items</div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Description</th>
+                                <th>Type</th>
+                                <th class="text-end">Quantity</th>
+                                <th class="text-end">Unit Price</th>
+                                <th class="text-end">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in invoice.line_items %}
+                            <tr>
+                                <td>{{ item.description }}</td>
+                                <td><span class="badge bg-light text-dark">{{ item.item_type|title }}</span></td>
+                                <td class="text-end">{{ item.quantity }}</td>
+                                <td class="text-end">${{ "%.2f"|format(item.unit_price) }}</td>
+                                <td class="text-end"><strong>${{ "%.2f"|format(item.total) }}</strong></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4 offset-md-8">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Subtotal:</span>
+                    <strong>${{ "%.2f"|format(invoice.subtotal) }}</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Tax ({{ (invoice.tax_rate * 100)|int }}%):</span>
+                    <strong>${{ "%.2f"|format(invoice.tax_amount) }}</strong>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between mb-3" style="font-size: 1.25rem;">
+                    <span>Total:</span>
+                    <strong>${{ "%.2f"|format(invoice.total) }}</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Paid:</span>
+                    <strong>${{ "%.2f"|format(invoice.paid_amount) }}</strong>
+                </div>
+                <div class="d-flex justify-content-between" style="font-size: 1.1rem;">
+                    <span>Balance Due:</span>
+                    <strong class="text-danger">${{ "%.2f"|format(invoice.balance_due) }}</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if invoice.payments %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">Payment History</div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Amount</th>
+                                <th>Method</th>
+                                <th>Reference</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for payment in invoice.payments %}
+                            <tr>
+                                <td>{{ payment.payment_date.strftime('%m/%d/%Y') }}</td>
+                                <td>${{ "%.2f"|format(payment.amount) }}</td>
+                                <td>{{ payment.payment_method or 'N/A' }}</td>
+                                <td>{{ payment.reference_number or '-' }}</td>
+                                <td>
+                                    <form method="post" action="{{ url_for('payments.delete_payment', payment_id=payment.id) }}" style="display:inline;">
+                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this payment?')">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
