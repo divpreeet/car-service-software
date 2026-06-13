@@ -2,5 +2,6 @@ from .customer import Customer
 from .estimate import Estimate, EstimateLineItem
 from .invoice import Invoice, InvoiceLineItem
 from .payment import Payment
+from .settings import Setting
 
-__all__ = ['Customer', 'Estimate', 'EstimateLineItem', 'Invoice', 'InvoiceLineItem', 'Payment']
+__all__ = ['Customer', 'Estimate', 'EstimateLineItem', 'Invoice', 'InvoiceLineItem', 'Payment', 'Setting']

@@ -14,17 +14,26 @@ def create_app(config_name=None):
     
     db.init_app(app)
     
+    from app.models import Customer, Estimate, EstimateLineItem, Invoice, InvoiceLineItem, Payment, Setting
+    
     with app.app_context():
         db.create_all()
     
-    # Register blueprints
-    from app.routes import customers_bp, estimates_bp, invoices_bp, payments_bp, reports_bp, main_bp
-    
-    app.register_blueprint(main_bp.bp)
-    app.register_blueprint(customers_bp.bp)
-    app.register_blueprint(estimates_bp.bp)
-    app.register_blueprint(invoices_bp.bp)
-    app.register_blueprint(payments_bp.bp)
-    app.register_blueprint(reports_bp.bp)
+    # Import and register blueprints
+    from app.routes.main_bp import bp as main_bp
+    from app.routes.customers_bp import bp as customers_bp
+    from app.routes.estimates_bp import bp as estimates_bp
+    from app.routes.invoices_bp import bp as invoices_bp
+    from app.routes.payments_bp import bp as payments_bp
+    from app.routes.reports_bp import bp as reports_bp
+    from app.routes.settings_bp import bp as settings_bp
+
+    app.register_blueprint(main_bp)
+    app.register_blueprint(customers_bp)
+    app.register_blueprint(estimates_bp)
+    app.register_blueprint(invoices_bp)
+    app.register_blueprint(payments_bp)
+    app.register_blueprint(reports_bp)
+    app.register_blueprint(settings_bp)
     
     return app

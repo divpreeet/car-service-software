@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Reports - Car Service Software{% endblock %}
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h1>Reports & Analytics</h1>
+    </div>
+</div>
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <h5 class="card-title">Total Revenue</h5>
+                <p class="card-text fs-3">${{ "%.2f"|format(revenue) }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <h5 class="card-title">Collected</h5>
+                <p class="card-text fs-3">${{ "%.2f"|format(collected) }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <h5 class="card-title">Outstanding</h5>
+                <p class="card-text fs-3">${{ "%.2f"|format(outstanding) }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <h5 class="card-title">This Month</h5>
+                <p class="card-text fs-3">${{ "%.2f"|format(monthly_revenue) }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header"><h5>Overview</h5></div>
+            <div class="card-body">
+                <p><strong>Total Customers:</strong> {{ total_customers }}</p>
+                <p><strong>Total Estimates:</strong> {{ total_estimates }}</p>
+                <p><strong>Total Invoices:</strong> {{ total_invoices }}</p>
+                <p><strong>Paid Invoices:</strong> {{ paid_invoices }}</p>
+                <p><strong>Overdue Invoices:</strong> {{ overdue_invoices }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Settings - Car Service Software{% endblock %}
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <h1>Settings</h1>
+        <form method="post" class="mt-4">
+            <div class="card mb-4">
+                <div class="card-header"><h5>Business Information</h5></div>
+                <div class="card-body">
+                    {% for key, info in settings.items() %}
+                    {% if key in ['business_name', 'business_address', 'business_phone', 'business_email'] %}
+                    <div class="mb-3">
+                        <label for="{{ key }}" class="form-label">{{ info.label }}</label>
+                        {% if info.type == 'email' %}
+                        <input type="email" class="form-control" id="{{ key }}" name="{{ key }}" value="{{ info.value }}">
+                        {% else %}
+                        <input type="text" class="form-control" id="{{ key }}" name="{{ key }}" value="{{ info.value }}">
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header"><h5>Defaults</h5></div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="default_tax_rate" class="form-label">Default Tax Rate (%)</label>
+                                <input type="number" class="form-control" id="default_tax_rate" name="default_tax_rate" value="{{ settings['default_tax_rate'].value or '10' }}" step="0.1">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="default_payment_terms" class="form-label">Default Payment Terms</label>
+                                <select class="form-select" id="default_payment_terms" name="default_payment_terms">
+                                    {% for val, label in [('net15', 'Net 15'), ('net30', 'Net 30'), ('net60', 'Net 60')] %}
+                                    <option value="{{ val }}" {% if settings['default_payment_terms'].value == val %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="currency_symbol" class="form-label">Currency Symbol</label>
+                                <input type="text" class="form-control" id="currency_symbol" name="currency_symbol" value="{{ settings['currency_symbol'].value or '$' }}" maxlength="5">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="estimate_prefix" class="form-label">Estimate Prefix</label>
+                                <input type="text" class="form-control" id="estimate_prefix" name="estimate_prefix" value="{{ settings['estimate_prefix'].value or 'EST-' }}">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="invoice_prefix" class="form-label">Invoice Prefix</label>
+                                <input type="text" class="form-control" id="invoice_prefix" name="invoice_prefix" value="{{ settings['invoice_prefix'].value or 'INV-' }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <button type="submit" class="btn btn-primary">Save Settings</button>
+                <a href="{{ url_for('main.index') }}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
