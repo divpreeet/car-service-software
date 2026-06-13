@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Car Service Software{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h1>Dashboard</h1>
+        <p class="text-muted">Welcome to your car service management system</p>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <h5 class="card-title">Total Customers</h5>
+                <p class="card-text fs-3">{{ total_customers }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <h5 class="card-title">Total Invoices</h5>
+                <p class="card-text fs-3">{{ total_invoices }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <h5 class="card-title">Pending Invoices</h5>
+                <p class="card-text fs-3">{{ pending_invoices }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-danger text-white">
+            <div class="card-body">
+                <h5 class="card-title">Outstanding Amount</h5>
+                <p class="card-text fs-4">${{ "%.2f"|format(outstanding_amount) }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Recent Invoices</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_invoices %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Invoice #</th>
+                                <th>Customer</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for invoice in recent_invoices %}
+                            <tr>
+                                <td><a href="{{ url_for('invoices.view_invoice', invoice_id=invoice.id) }}">{{ invoice.invoice_number }}</a></td>
+                                <td>{{ invoice.customer.name }}</td>
+                                <td>${{ "%.2f"|format(invoice.total) }}</td>
+                                <td>
+                                    {% if invoice.status == 'paid' %}
+                                        <span class="badge bg-success">Paid</span>
+                                    {% elif invoice.status == 'overdue' %}
+                                        <span class="badge bg-danger">Overdue</span>
+                                    {% elif invoice.status == 'partially_paid' %}
+                                        <span class="badge bg-warning">Partially Paid</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ invoice.status|title }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ invoice.issue_date.strftime('%m/%d/%Y') }}</td>
+                                <td>
+                                    <a href="{{ url_for('invoices.view_invoice', invoice_id=invoice.id) }}" class="btn btn-sm btn-info">View</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">No invoices yet. <a href="{{ url_for('estimates.create_estimate') }}">Create your first estimate</a></p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

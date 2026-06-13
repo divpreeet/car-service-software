@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}{{ customer.name }} - Car Service Software{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1>{{ customer.name }}</h1>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ url_for('customers.edit_customer', customer_id=customer.id) }}" class="btn btn-warning">Edit</a>
+        <form method="post" action="{{ url_for('customers.delete_customer', customer_id=customer.id) }}" style="display:inline;">
+            <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure?')">Delete</button>
+        </form>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5>Contact Information</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Email:</strong> {{ customer.email or 'N/A' }}</p>
+                <p><strong>Phone:</strong> {{ customer.phone or 'N/A' }}</p>
+                <p><strong>Address:</strong> {{ customer.address or 'N/A' }}</p>
+                <p><strong>City:</strong> {{ customer.city or 'N/A' }}</p>
+                <p><strong>State:</strong> {{ customer.state or 'N/A' }}</p>
+                <p><strong>ZIP Code:</strong> {{ customer.zip_code or 'N/A' }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5>Vehicle Information</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Year:</strong> {{ customer.vehicle_year or 'N/A' }}</p>
+                <p><strong>Make:</strong> {{ customer.vehicle_make or 'N/A' }}</p>
+                <p><strong>Model:</strong> {{ customer.vehicle_model or 'N/A' }}</p>
+                <p><strong>License Plate:</strong> {{ customer.vehicle_plate or 'N/A' }}</p>
+                <p><strong>VIN:</strong> {{ customer.vehicle_vin or 'N/A' }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Service History</h5>
+            </div>
+            <div class="card-body">
+                {% if customer.invoices %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Invoice #</th>
+                                <th>Date</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for invoice in customer.invoices %}
+                            <tr>
+                                <td>{{ invoice.invoice_number }}</td>
+                                <td>{{ invoice.issue_date.strftime('%m/%d/%Y') }}</td>
+                                <td>${{ "%.2f"|format(invoice.total) }}</td>
+                                <td>
+                                    <span class="badge bg-{% if invoice.status == 'paid' %}success{% elif invoice.status == 'overdue' %}danger{% else %}secondary{% endif %}">{{ invoice.status|title }}</span>
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('invoices.view_invoice', invoice_id=invoice.id) }}" class="btn btn-sm btn-info">View</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">No service history yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

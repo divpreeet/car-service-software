@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}{% if customer %}Edit Customer{% else %}Add Customer{% endif %} - Car Service Software{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <h1>{% if customer %}Edit Customer{% else %}Add New Customer{% endif %}</h1>
+
+        <form method="post" class="mt-4">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Name *</label>
+                        <input type="text" class="form-control" id="name" name="name" value="{{ customer.name if customer else '' }}" required>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" name="email" value="{{ customer.email if customer else '' }}">
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="phone" class="form-label">Phone</label>
+                        <input type="tel" class="form-control" id="phone" name="phone" value="{{ customer.phone if customer else '' }}">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="address" class="form-label">Address</label>
+                        <input type="text" class="form-control" id="address" name="address" value="{{ customer.address if customer else '' }}">
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="city" class="form-label">City</label>
+                        <input type="text" class="form-control" id="city" name="city" value="{{ customer.city if customer else '' }}">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="state" class="form-label">State</label>
+                        <input type="text" class="form-control" id="state" name="state" value="{{ customer.state if customer else '' }}">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="zip_code" class="form-label">ZIP Code</label>
+                        <input type="text" class="form-control" id="zip_code" name="zip_code" value="{{ customer.zip_code if customer else '' }}">
+                    </div>
+                </div>
+            </div>
+
+            <hr>
+            <h5>Vehicle Information</h5>
+
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="mb-3">
+                        <label for="vehicle_year" class="form-label">Year</label>
+                        <input type="number" class="form-control" id="vehicle_year" name="vehicle_year" value="{{ customer.vehicle_year if customer else '' }}">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="mb-3">
+                        <label for="vehicle_make" class="form-label">Make</label>
+                        <input type="text" class="form-control" id="vehicle_make" name="vehicle_make" value="{{ customer.vehicle_make if customer else '' }}">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="mb-3">
+                        <label for="vehicle_model" class="form-label">Model</label>
+                        <input type="text" class="form-control" id="vehicle_model" name="vehicle_model" value="{{ customer.vehicle_model if customer else '' }}">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="mb-3">
+                        <label for="vehicle_plate" class="form-label">Plate</label>
+                        <input type="text" class="form-control" id="vehicle_plate" name="vehicle_plate" value="{{ customer.vehicle_plate if customer else '' }}">
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="vehicle_vin" class="form-label">VIN</label>
+                        <input type="text" class="form-control" id="vehicle_vin" name="vehicle_vin" value="{{ customer.vehicle_vin if customer else '' }}">
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="notes" class="form-label">Notes</label>
+                <textarea class="form-control" id="notes" name="notes" rows="3">{{ customer.notes if customer else '' }}</textarea>
+            </div>
+
+            <div class="mb-3">
+                <button type="submit" class="btn btn-primary">{% if customer %}Update Customer{% else %}Add Customer{% endif %}</button>
+                <a href="{{ url_for('customers.list_customers') }}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
