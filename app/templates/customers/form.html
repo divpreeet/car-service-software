@@ -60,42 +60,60 @@
             </div>
 
             <hr>
-            <h5>Vehicle Information</h5>
-
-            <div class="row">
-                <div class="col-md-3">
-                    <div class="mb-3">
-                        <label for="vehicle_year" class="form-label">Year</label>
-                        <input type="number" class="form-control" id="vehicle_year" name="vehicle_year" value="{{ customer.vehicle_year if customer else '' }}">
+            <h5>Vehicles</h5>
+            <input type="hidden" id="vehiclesCount" name="vehicles_count" value="{{ customer.vehicles|length if customer else 1 }}">
+            <div id="vehiclesContainer">
+                {% if customer and customer.vehicles %}
+                    {% for v in customer.vehicles %}
+                    <div class="vehicle-item card mb-2">
+                        <div class="card-body py-2">
+                            <input type="hidden" name="vehicles[{{ loop.index0 }}][id]" value="{{ v.id }}">
+                            <div class="row">
+                                <div class="col-md-2">
+                                    <input type="number" name="vehicles[{{ loop.index0 }}][year]" class="form-control form-control-sm" placeholder="Year" value="{{ v.year }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <input type="text" name="vehicles[{{ loop.index0 }}][make]" class="form-control form-control-sm" placeholder="Make" value="{{ v.make }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <input type="text" name="vehicles[{{ loop.index0 }}][model]" class="form-control form-control-sm" placeholder="Model" value="{{ v.model }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <input type="text" name="vehicles[{{ loop.index0 }}][plate]" class="form-control form-control-sm" placeholder="Plate" value="{{ v.plate }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <input type="text" name="vehicles[{{ loop.index0 }}][vin]" class="form-control form-control-sm" placeholder="VIN" value="{{ v.vin }}">
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="mb-3">
-                        <label for="vehicle_make" class="form-label">Make</label>
-                        <input type="text" class="form-control" id="vehicle_make" name="vehicle_make" value="{{ customer.vehicle_make if customer else '' }}">
+                    {% endfor %}
+                {% else %}
+                    <div class="vehicle-item card mb-2">
+                        <div class="card-body py-2">
+                            <div class="row">
+                                <div class="col-md-2">
+                                    <input type="number" name="vehicles[0][year]" class="form-control form-control-sm" placeholder="Year">
+                                </div>
+                                <div class="col-md-3">
+                                    <input type="text" name="vehicles[0][make]" class="form-control form-control-sm" placeholder="Make">
+                                </div>
+                                <div class="col-md-3">
+                                    <input type="text" name="vehicles[0][model]" class="form-control form-control-sm" placeholder="Model">
+                                </div>
+                                <div class="col-md-2">
+                                    <input type="text" name="vehicles[0][plate]" class="form-control form-control-sm" placeholder="Plate">
+                                </div>
+                                <div class="col-md-2">
+                                    <input type="text" name="vehicles[0][vin]" class="form-control form-control-sm" placeholder="VIN">
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="mb-3">
-                        <label for="vehicle_model" class="form-label">Model</label>
-                        <input type="text" class="form-control" id="vehicle_model" name="vehicle_model" value="{{ customer.vehicle_model if customer else '' }}">
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="mb-3">
-                        <label for="vehicle_plate" class="form-label">Plate</label>
-                        <input type="text" class="form-control" id="vehicle_plate" name="vehicle_plate" value="{{ customer.vehicle_plate if customer else '' }}">
-                    </div>
-                </div>
+                {% endif %}
             </div>
-
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label for="vehicle_vin" class="form-label">VIN</label>
-                        <input type="text" class="form-control" id="vehicle_vin" name="vehicle_vin" value="{{ customer.vehicle_vin if customer else '' }}">
-                    </div>
-                </div>
+            <div class="mb-3">
+                <button type="button" class="btn btn-secondary btn-sm" id="addVehicle">+ Add Vehicle</button>
             </div>
 
             <div class="mb-3">
@@ -110,4 +128,26 @@
         </form>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('addVehicle').addEventListener('click', function() {
+    var container = document.getElementById('vehiclesContainer');
+    var count = parseInt(document.getElementById('vehiclesCount').value);
+    var idx = count;
+    var div = document.createElement('div');
+    div.className = 'vehicle-item card mb-2';
+    div.innerHTML = '<div class="card-body py-2">' +
+        '<div class="row">' +
+        '<div class="col-md-2"><input type="number" name="vehicles[' + idx + '][year]" class="form-control form-control-sm" placeholder="Year"></div>' +
+        '<div class="col-md-3"><input type="text" name="vehicles[' + idx + '][make]" class="form-control form-control-sm" placeholder="Make"></div>' +
+        '<div class="col-md-3"><input type="text" name="vehicles[' + idx + '][model]" class="form-control form-control-sm" placeholder="Model"></div>' +
+        '<div class="col-md-2"><input type="text" name="vehicles[' + idx + '][plate]" class="form-control form-control-sm" placeholder="Plate"></div>' +
+        '<div class="col-md-2"><input type="text" name="vehicles[' + idx + '][vin]" class="form-control form-control-sm" placeholder="VIN"></div>' +
+        '</div></div>';
+    container.appendChild(div);
+    document.getElementById('vehiclesCount').value = idx + 1;
+});
+</script>
 {% endblock %}

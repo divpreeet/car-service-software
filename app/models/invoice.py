@@ -8,6 +8,10 @@ class Invoice(db.Model):
     invoice_number = db.Column(db.String(50), unique=True, nullable=False)
     customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'), nullable=False)
     estimate_id = db.Column(db.Integer, db.ForeignKey('estimates.id'), nullable=True)
+    vehicle_id = db.Column(db.Integer, db.ForeignKey('vehicles.id'), nullable=True)
+    vehicle = db.relationship('Vehicle', backref='invoices', lazy=True)
+    workshop_id = db.Column(db.Integer, db.ForeignKey('workshops.id'), nullable=True)
+    workshop = db.relationship('Workshop', backref='invoices', lazy=True)
     description = db.Column(db.Text)
     status = db.Column(db.String(20), default='draft')  # draft, sent, paid, overdue, partially_paid
     subtotal = db.Column(db.Float, default=0)

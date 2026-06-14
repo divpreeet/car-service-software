@@ -198,7 +198,7 @@ class _PDFDocTemplate(BaseDocTemplate):
         self.addPageTemplates([PageTemplate(id='main', frames=frame, onPage=_header_footer)])
 
 
-def build_pdf(title, doc_type_label, doc_number, entity, items, subtotal, tax_rate, tax_amount, total, notes="", date_label="Date", date_value=None, due_label=None, due_value=None, vehicle_info=""):
+def build_pdf(title, doc_type_label, doc_number, entity, items, subtotal, tax_rate, tax_amount, total, notes="", date_label="Date", date_value=None, due_label=None, due_value=None, vehicle_info="", workshop_info=""):
     buf = BytesIO()
     doc = _PDFDocTemplate(buf, pagesize=A4, leftMargin=MARGIN, rightMargin=MARGIN,
                           topMargin=MARGIN, bottomMargin=MARGIN + 8*mm)
@@ -270,7 +270,7 @@ def build_pdf(title, doc_type_label, doc_number, entity, items, subtotal, tax_ra
             ('BOTTOMPADDING', (0,0), (-1,-1), 0),
         ]))
         elements.append(title_table)
-        elements.append(Spacer(1, 2*mm))
+        elements.append(Spacer(1, 6*mm))
         elements.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor('#2563eb'), spaceAfter=2*mm))
 
     # --- Info strip: tax-number ---
@@ -292,30 +292,40 @@ def build_pdf(title, doc_type_label, doc_number, entity, items, subtotal, tax_ra
         elements.append(it)
         elements.append(Spacer(1, 6*mm))
 
-    # --- Bill To + Vehicle Info (2-column) ---
+    # --- Bill To + Vehicle Info + Workshop (3-column) ---
     show_bill = _in_body(layout, 'bill_to')
     show_veh = _in_body(layout, 'vehicle_info') and vehicle_info
+    show_workshop = bool(workshop_info)
 
-    if show_bill or show_veh:
-        left_cell = Paragraph(
-            f"<font color='{_ORANGE_HEX}' size='7'><b>BILL TO</b></font><br/>"
-            f"<b>{entity.replace('<br/>', '<br/>')}</b>",
-            styles['Small']) if show_bill else Paragraph('', styles['Small'])
+    if show_bill or show_veh or show_workshop:
+        cells = []
+        cols_active = []
+        for idx, (visible, label, content) in enumerate([
+            (show_bill, 'BILL TO', f"<b>{entity.replace('<br/>', '<br/>')}</b>"),
+            (show_veh, 'VEHICLE', vehicle_info.replace('<br/>', '<br/>')),
+            (show_workshop, 'SERVICED BY', workshop_info.replace('<br/>', '<br/>')),
+        ]):
+            if visible:
+                cells.append(Paragraph(
+                    f"<font color='{_ORANGE_HEX}' size='7'><b>{label}</b></font><br/>{content}",
+                    styles['Small']))
+                cols_active.append(visible)
 
-        right_cell = Paragraph(
-            f"<font color='{_ORANGE_HEX}' size='7'><b>VEHICLE</b></font><br/>"
-            f"{vehicle_info.replace('<br/>', '<br/>')}",
-            styles['Small']) if show_veh else Paragraph('', styles['Small'])
-
-        cols = 2 if (show_bill and show_veh) else 1
-        cells = [left_cell, right_cell] if (show_bill and show_veh) else ([left_cell] if show_bill else [right_cell])
-        cw = [aw / cols] * cols
-
+        ncols = len(cols_active)
+        if ncols == 3:
+            cw = [aw * 0.35, aw * 0.40, aw * 0.25]
+        elif ncols == 2:
+            cw = [aw / 2] * 2
+        else:
+            cw = [aw]
         bt = Table([cells], colWidths=cw)
         bt.setStyle(TableStyle([
             ('VALIGN', (0,0), (-1,-1), 'TOP'),
             ('TOPPADDING', (0,0), (-1,-1), 2),
             ('BOTTOMPADDING', (0,0), (-1,-1), 2),
+            ('LEFTPADDING', (0,0), (-1,-1), 24),
+            ('RIGHTPADDING', (0,0), (0,0), 38),
+            ('RIGHTPADDING', (1,0), (1,0), 64),
         ]))
         elements.append(bt)
         elements.append(Spacer(1, 6*mm))

@@ -8,6 +8,8 @@ class Estimate(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     estimate_number = db.Column(db.String(50), unique=True, nullable=False)
     customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'), nullable=False)
+    vehicle_id = db.Column(db.Integer, db.ForeignKey('vehicles.id'), nullable=True)
+    vehicle = db.relationship('Vehicle', backref='estimates', lazy=True)
     description = db.Column(db.Text)
     status = db.Column(db.String(20), default='draft')  # draft, approved, rejected, converted
     subtotal = db.Column(db.Float, default=0)

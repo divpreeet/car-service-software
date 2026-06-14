@@ -1,9 +1,11 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file
 from markupsafe import Markup
 from app.pdf_utils import build_pdf
-from app.models import Invoice, InvoiceLineItem, Setting
+from app.models import Invoice, InvoiceLineItem, Setting, Workshop
 from app import db
 from datetime import datetime
+
+PAYMENT_TERMS_OPTS = [('immediate', 'Immediate'), ('net15', 'Net 15'), ('net30', 'Net 30'), ('net60', 'Net 60')]
 
 bp = Blueprint('invoices', __name__)
 
@@ -48,6 +50,7 @@ def edit_invoice(invoice_id):
     if request.method == 'POST':
         invoice.description = request.form.get('description', '')
         invoice.odometer_reading = request.form.get('odometer_reading', '')
+        invoice.workshop_id = request.form.get('workshop_id', type=int) or None
         invoice.notes = request.form.get('notes', '')
         invoice.tax_rate = float(request.form.get('tax_rate', 5)) / 100
         invoice.payment_terms = request.form.get('payment_terms', 'net30')
@@ -79,7 +82,8 @@ def edit_invoice(invoice_id):
         flash('Invoice updated successfully', 'success')
         return redirect(url_for('invoices.view_invoice', invoice_id=invoice.id))
     default_tax = Setting.get('default_tax_rate', '5')
-    return render_template('invoices/form.html', invoice=invoice, currency=_currency(), default_tax=default_tax)
+    workshops = Workshop.query.order_by(Workshop.name).all()
+    return render_template('invoices/form.html', invoice=invoice, currency=_currency(), default_tax=default_tax, workshops=workshops, payment_terms_options=PAYMENT_TERMS_OPTS)
 
 @bp.route('/invoices/<int:invoice_id>/mark-sent', methods=['POST'])
 def mark_sent(invoice_id):
@@ -106,16 +110,26 @@ def pdf_invoice(invoice_id):
     invoice = Invoice.query.get_or_404(invoice_id)
     c = invoice.customer
     vehicle_parts = []
-    if c.vehicle_year or c.vehicle_make or c.vehicle_model:
-        vehicle_parts.append(f"{c.vehicle_year or ''} {c.vehicle_make or ''} {c.vehicle_model or ''}".strip())
-    if c.vehicle_vin:
-        vehicle_parts.append(f"VIN: {c.vehicle_vin}")
-    if c.vehicle_plate:
-        vehicle_parts.append(f"Plate: {c.vehicle_plate}")
+    v = invoice.vehicle or (invoice.estimate.vehicle if invoice.estimate else None)
+    if v:
+        if v.year or v.make or v.model:
+            vehicle_parts.append(f"{v.year or ''} {v.make or ''} {v.model or ''}".strip())
+        if v.vin:
+            vehicle_parts.append(f"VIN: {v.vin}")
+        if v.plate:
+            vehicle_parts.append(f"Plate: {v.plate}")
     odometer = invoice.odometer_reading or (invoice.estimate.odometer_reading if invoice.estimate else None)
     if odometer:
         vehicle_parts.append(f"Odometer: {odometer}")
     vehicle_info = "<br/>".join(vehicle_parts)
+    workshop_info = ""
+    if invoice.workshop:
+        w = invoice.workshop
+        workshop_info = w.name or ""
+        if w.area:
+            workshop_info += f"<br/>{w.area}"
+        if w.emirate_state:
+            workshop_info += f"<br/>{w.emirate_state}, UAE"
     entity = c.name
     if c.phone:
         entity += f"<br/>{c.phone}"
@@ -139,5 +153,6 @@ def pdf_invoice(invoice_id):
         date_label='Invoice Date',
         date_value=date_value,
         vehicle_info=vehicle_info,
+        workshop_info=workshop_info,
     )
     return send_file(buf, mimetype='application/pdf', as_attachment=False, download_name=f'invoice_{invoice.invoice_number}.pdf')

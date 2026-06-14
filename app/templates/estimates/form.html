@@ -19,8 +19,15 @@
                 </div>
                 <div class="col-md-6">
                     <div class="mb-3">
-                        <label for="tax_rate" class="form-label">Tax Rate (%)</label>
-                        <input type="number" class="form-control" id="tax_rate" name="tax_rate" value="{{ estimate.tax_rate * 100 if estimate else default_tax }}" step="0.1">
+                        <label for="vehicle_id" class="form-label">Vehicle</label>
+                        <select class="form-select" id="vehicle_id" name="vehicle_id">
+                            <option value="">-- Select Vehicle --</option>
+                            {% for customer in customers %}
+                                {% for v in customer.vehicles %}
+                                <option value="{{ v.id }}" data-customer="{{ customer.id }}" {% if estimate and estimate.vehicle_id == v.id %}selected{% endif %}>{{ v }}</option>
+                                {% endfor %}
+                            {% endfor %}
+                        </select>
                     </div>
                 </div>
             </div>
@@ -115,4 +122,23 @@
         </form>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function filterVehicles() {
+    var customerId = document.getElementById('customer_id').value;
+    var vehicleSelect = document.getElementById('vehicle_id');
+    for (var i = 0; i < vehicleSelect.options.length; i++) {
+        var opt = vehicleSelect.options[i];
+        if (opt.value === '') continue;
+        opt.style.display = opt.getAttribute('data-customer') === customerId ? '' : 'none';
+    }
+    if (vehicleSelect.selectedIndex > 0 && vehicleSelect.options[vehicleSelect.selectedIndex].style.display === 'none') {
+        vehicleSelect.value = '';
+    }
+}
+document.getElementById('customer_id').addEventListener('change', filterVehicles);
+filterVehicles();
+</script>
 {% endblock %}

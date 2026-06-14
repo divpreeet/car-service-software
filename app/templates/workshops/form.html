@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}{% if workshop %}Edit Workshop{% else %}Add Workshop{% endif %} - Car Service Software{% endblock %}
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <h1>{% if workshop %}Edit Workshop{% else %}Add New Workshop{% endif %}</h1>
+        <form method="post" class="mt-4">
+            <div class="mb-3">
+                <label for="name" class="form-label">Name</label>
+                <input type="text" class="form-control" id="name" name="name" value="{{ workshop.name if workshop else '' }}">
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="area" class="form-label">Area</label>
+                        <input type="text" class="form-control" id="area" name="area" value="{{ workshop.area if workshop else '' }}">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="city" class="form-label">City</label>
+                        <input type="text" class="form-control" id="city" name="city" value="{{ workshop.city if workshop else '' }}">
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="emirate_state" class="form-label">Emirate/State</label>
+                        <input type="text" class="form-control" id="emirate_state" name="emirate_state" value="{{ workshop.emirate_state if workshop else '' }}">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="country" class="form-label">Country</label>
+                        <input type="text" class="form-control" id="country" name="country" value="{{ workshop.country if workshop else '' }}">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="zip_code" class="form-label">ZIP</label>
+                        <input type="text" class="form-control" id="zip_code" name="zip_code" value="{{ workshop.zip_code if workshop else '' }}">
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" name="email" value="{{ workshop.email if workshop else '' }}">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="vat_number" class="form-label">VAT Number</label>
+                        <input type="text" class="form-control" id="vat_number" name="vat_number" value="{{ workshop.vat_number if workshop else '' }}">
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="mobile_number" class="form-label">Mobile Number</label>
+                        <input type="tel" class="form-control" id="mobile_number" name="mobile_number" value="{{ workshop.mobile_number if workshop else '' }}">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="phone_number" class="form-label">Phone Number</label>
+                        <input type="tel" class="form-control" id="phone_number" name="phone_number" value="{{ workshop.phone_number if workshop else '' }}">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="whatsapp_number" class="form-label">Whatsapp Number</label>
+                        <input type="tel" class="form-control" id="whatsapp_number" name="whatsapp_number" value="{{ workshop.whatsapp_number if workshop else '' }}">
+                    </div>
+                </div>
+            </div>
+            <div class="mb-3">
+                <button type="submit" class="btn btn-primary">{% if workshop %}Update Workshop{% else %}Add Workshop{% endif %}</button>
+                <a href="{{ url_for('workshops.list_workshops') }}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

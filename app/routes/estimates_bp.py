@@ -38,6 +38,7 @@ def create_estimate():
         est = Estimate(
             estimate_number=_next_estimate_number(),
             customer_id=request.form.get('customer_id', type=int),
+            vehicle_id=request.form.get('vehicle_id', type=int) or None,
             description=request.form.get('description', ''),
             odometer_reading=request.form.get('odometer_reading', ''),
             notes=request.form.get('notes', ''),
@@ -83,6 +84,7 @@ def edit_estimate(estimate_id):
     estimate = Estimate.query.get_or_404(estimate_id)
     if request.method == 'POST':
         estimate.customer_id = request.form.get('customer_id', type=int)
+        estimate.vehicle_id = request.form.get('vehicle_id', type=int) or None
         estimate.description = request.form.get('description', '')
         estimate.odometer_reading = request.form.get('odometer_reading', '')
         estimate.notes = request.form.get('notes', '')
@@ -138,6 +140,7 @@ def convert_to_invoice(estimate_id):
         estimate_id=estimate.id,
         description=estimate.description,
         odometer_reading=estimate.odometer_reading,
+        vehicle_id=estimate.vehicle_id,
         notes=estimate.notes,
         subtotal=estimate.subtotal,
         tax_rate=estimate.tax_rate,
@@ -163,15 +166,17 @@ def pdf_estimate(estimate_id):
     estimate = Estimate.query.get_or_404(estimate_id)
     c = estimate.customer
     vehicle_parts = []
-    if c.vehicle_year or c.vehicle_make or c.vehicle_model:
-        vehicle_parts.append(f"{c.vehicle_year or ''} {c.vehicle_make or ''} {c.vehicle_model or ''}".strip())
-    if c.vehicle_vin:
-        vehicle_parts.append(f"VIN: {c.vehicle_vin}")
-    if c.vehicle_plate:
-        vehicle_parts.append(f"Plate: {c.vehicle_plate}")
-    vehicle_info = "<br/>".join(vehicle_parts)
+    v = estimate.vehicle
+    if v:
+        if v.year or v.make or v.model:
+            vehicle_parts.append(f"{v.year or ''} {v.make or ''} {v.model or ''}".strip())
+        if v.vin:
+            vehicle_parts.append(f"VIN: {v.vin}")
+        if v.plate:
+            vehicle_parts.append(f"Plate: {v.plate}")
     if estimate.odometer_reading:
-        vehicle_info += f"<br/>Odometer: {estimate.odometer_reading}"
+        vehicle_parts.append(f"Odometer: {estimate.odometer_reading}")
+    vehicle_info = "<br/>".join(vehicle_parts)
     entity = c.name
     if c.phone:
         entity += f"<br/>{c.phone}"

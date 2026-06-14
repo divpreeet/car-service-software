@@ -16,17 +16,40 @@
                     <div class="mb-3">
                         <label for="payment_terms" class="form-label">Payment Terms</label>
                         <select class="form-select" id="payment_terms" name="payment_terms">
-                            <option value="net15" {% if invoice and invoice.payment_terms == 'net15' %}selected{% endif %}>Net 15</option>
-                            <option value="net30" {% if invoice and invoice.payment_terms == 'net30' %}selected{% endif %}>Net 30</option>
-                            <option value="net60" {% if invoice and invoice.payment_terms == 'net60' %}selected{% endif %}>Net 60</option>
+                            {% for val, label in payment_terms_options %}
+                            <option value="{{ val }}" {% if invoice and invoice.payment_terms == val %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
                         </select>
                     </div>
                 </div>
             </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="odometer_reading" class="form-label">Odometer Reading</label>
+                        <input type="text" class="form-control" id="odometer_reading" name="odometer_reading"
+                               value="{{ invoice.odometer_reading if invoice else '' }}" placeholder="e.g. 45000 km">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="workshop_id" class="form-label">Workshop</label>
+                        <select class="form-select" id="workshop_id" name="workshop_id">
+                            <option value="">-- Select Workshop --</option>
+                            {% for w in workshops %}
+                            <option value="{{ w.id }}" {% if invoice and invoice.workshop_id == w.id %}selected{% endif %}>{{ w.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
             <div class="mb-3">
                 <label for="description" class="form-label">Description</label>
                 <textarea class="form-control" id="description" name="description" rows="3">{{ invoice.description if invoice else '' }}</textarea>
             </div>
+
             <hr>
             <h5>Line Items</h5>
             <input type="hidden" id="lineItemsCount" name="line_items_count" value="{{ invoice.line_items|length if invoice else 1 }}">
@@ -82,11 +105,7 @@
             <div class="mb-3">
                 <button type="button" class="btn btn-secondary" id="addLineItem">+ Add Line Item</button>
             </div>
-            <div class="mb-3">
-                <label for="odometer_reading" class="form-label">Odometer Reading</label>
-                <input type="text" class="form-control" id="odometer_reading" name="odometer_reading"
-                       value="{{ invoice.odometer_reading if invoice else '' }}" placeholder="e.g. 45000 km">
-            </div>
+
             <div class="mb-3">
                 <label for="notes" class="form-label">Notes</label>
                 <textarea class="form-control" id="notes" name="notes" rows="3">{{ invoice.notes if invoice else '' }}</textarea>

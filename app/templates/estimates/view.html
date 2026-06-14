@@ -30,11 +30,15 @@
     </div>
     <div class="col-md-6">
         <div class="card mb-3">
-            <div class="card-header">Estimate Details</div>
+            <div class="card-header">Vehicle</div>
             <div class="card-body">
-                <p><strong>Status:</strong> <span class="badge bg-secondary">{{ estimate.status|title }}</span></p>
-                {% if estimate.valid_until %}<p><strong>Valid Until:</strong> {{ estimate.valid_until.strftime('%B %d, %Y') }}</p>{% endif %}
-                <p><strong>Tax Rate:</strong> {{ (estimate.tax_rate * 100)|int }}%</p>
+                {% if estimate.vehicle %}
+                <p><strong>{{ estimate.vehicle.year or '' }} {{ estimate.vehicle.make or '' }} {{ estimate.vehicle.model or '' }}</strong></p>
+                {% if estimate.vehicle.plate %}<p><strong>Plate:</strong> {{ estimate.vehicle.plate }}</p>{% endif %}
+                {% if estimate.vehicle.vin %}<p><strong>VIN:</strong> {{ estimate.vehicle.vin }}</p>{% endif %}
+                {% else %}
+                <p class="text-muted mb-0">No vehicle selected.</p>
+                {% endif %}
                 {% if estimate.odometer_reading %}<p><strong>Odometer:</strong> {{ estimate.odometer_reading }}</p>{% endif %}
             </div>
         </div>

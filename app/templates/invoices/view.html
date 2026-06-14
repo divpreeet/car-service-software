@@ -42,15 +42,15 @@
         <div class="card mb-3">
             <div class="card-header">Vehicle Information</div>
             <div class="card-body">
-                {% if invoice.customer.vehicle_make or invoice.customer.vehicle_model %}
-                <p><strong>{{ invoice.customer.vehicle_year or '' }} {{ invoice.customer.vehicle_make or '' }} {{ invoice.customer.vehicle_model or '' }}</strong></p>
+                {% set v = invoice.vehicle or (invoice.estimate.vehicle if invoice.estimate else none) %}
+                {% if v %}
+                <p><strong>{{ v.year or '' }} {{ v.make or '' }} {{ v.model or '' }}</strong></p>
+                {% if v.plate %}<p><strong>Plate:</strong> {{ v.plate }}</p>{% endif %}
+                {% if v.vin %}<p><strong>VIN:</strong> {{ v.vin }}</p>{% endif %}
+                {% else %}
+                <p class="text-muted mb-0">No vehicle on file.</p>
                 {% endif %}
-                {% if invoice.customer.vehicle_vin %}<p><strong>VIN:</strong> {{ invoice.customer.vehicle_vin }}</p>{% endif %}
-                {% if invoice.customer.vehicle_plate %}<p><strong>Plate:</strong> {{ invoice.customer.vehicle_plate }}</p>{% endif %}
                 {% if invoice.odometer_reading %}<p><strong>Odometer:</strong> {{ invoice.odometer_reading }}</p>{% endif %}
-                {% if not invoice.customer.vehicle_make and not invoice.customer.vehicle_model and not invoice.customer.vehicle_vin and not invoice.customer.vehicle_plate %}
-                <p class="text-muted mb-0">No vehicle information on file</p>
-                {% endif %}
             </div>
         </div>
     </div>
@@ -71,7 +71,12 @@
 <div class="row">
     <div class="col-md-12">
         <div class="card mb-3">
-            <div class="card-header">Invoice Details</div>
+            <div class="card-header">
+                Invoice Details
+                {% if invoice.workshop %}
+                <span class="float-end"><strong>Workshop:</strong> {{ invoice.workshop.name }}</span>
+                {% endif %}
+            </div>
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-3">

@@ -34,14 +34,20 @@
     <div class="col-md-6">
         <div class="card mb-3">
             <div class="card-header">
-                <h5>Vehicle Information</h5>
+                <h5>Vehicles ({{ customer.vehicles|length }})</h5>
             </div>
             <div class="card-body">
-                <p><strong>Year:</strong> {{ customer.vehicle_year or 'N/A' }}</p>
-                <p><strong>Make:</strong> {{ customer.vehicle_make or 'N/A' }}</p>
-                <p><strong>Model:</strong> {{ customer.vehicle_model or 'N/A' }}</p>
-                <p><strong>License Plate:</strong> {{ customer.vehicle_plate or 'N/A' }}</p>
-                <p><strong>VIN:</strong> {{ customer.vehicle_vin or 'N/A' }}</p>
+                {% if customer.vehicles %}
+                    {% for v in customer.vehicles %}
+                    <div class="mb-2 pb-2 {% if not loop.last %}border-bottom{% endif %}">
+                        <strong>{{ v.year or '' }} {{ v.make or '' }} {{ v.model or '' }}</strong>
+                        {% if v.plate %}<br><span class="text-muted">Plate:</span> {{ v.plate }}{% endif %}
+                        {% if v.vin %}<br><span class="text-muted">VIN:</span> {{ v.vin }}{% endif %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <p class="text-muted mb-0">No vehicles on file.</p>
+                {% endif %}
             </div>
         </div>
     </div>
