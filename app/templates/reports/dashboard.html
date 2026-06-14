@@ -11,7 +11,7 @@
         <div class="card bg-primary text-white">
             <div class="card-body">
                 <h5 class="card-title">Total Revenue</h5>
-                <p class="card-text fs-3">${{ "%.2f"|format(revenue) }}</p>
+                <p class="card-text fs-3">{{ currency }}{{ "%.2f"|format(revenue) }}</p>
             </div>
         </div>
     </div>
@@ -19,7 +19,7 @@
         <div class="card bg-success text-white">
             <div class="card-body">
                 <h5 class="card-title">Collected</h5>
-                <p class="card-text fs-3">${{ "%.2f"|format(collected) }}</p>
+                <p class="card-text fs-3">{{ currency }}{{ "%.2f"|format(collected) }}</p>
             </div>
         </div>
     </div>
@@ -27,7 +27,7 @@
         <div class="card bg-warning text-white">
             <div class="card-body">
                 <h5 class="card-title">Outstanding</h5>
-                <p class="card-text fs-3">${{ "%.2f"|format(outstanding) }}</p>
+                <p class="card-text fs-3">{{ currency }}{{ "%.2f"|format(outstanding) }}</p>
             </div>
         </div>
     </div>
@@ -35,7 +35,7 @@
         <div class="card bg-info text-white">
             <div class="card-body">
                 <h5 class="card-title">This Month</h5>
-                <p class="card-text fs-3">${{ "%.2f"|format(monthly_revenue) }}</p>
+                <p class="card-text fs-3">{{ currency }}{{ "%.2f"|format(monthly_revenue) }}</p>
             </div>
         </div>
     </div>

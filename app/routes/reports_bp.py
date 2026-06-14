@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template
-from app.models import Customer, Invoice, Estimate
+from app.models import Customer, Invoice, Estimate, Setting
 from app import db
 from datetime import datetime, timedelta
 
@@ -21,6 +21,10 @@ def dashboard():
     monthly_revenue = db.session.query(db.func.coalesce(db.func.sum(Invoice.total), 0)).filter(
         Invoice.issue_date >= this_month).scalar()
 
+    currencies = {'USD': '$', 'EUR': '€', 'GBP': '£', 'AED': '\u20C3', 'INR': '₹', 'SAR': '﷼'}
+    code = Setting.get('currency', 'USD')
+    currency = currencies.get(code, '$')
+
     return render_template('reports/dashboard.html',
         total_customers=total_customers,
         total_estimates=total_estimates,
@@ -30,4 +34,5 @@ def dashboard():
         revenue=float(revenue),
         collected=float(collected),
         outstanding=outstanding,
-        monthly_revenue=float(monthly_revenue))
+        monthly_revenue=float(monthly_revenue),
+        currency=currency)

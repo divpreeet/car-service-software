@@ -14,6 +14,7 @@ class Estimate(db.Model):
     tax_rate = db.Column(db.Float, default=0.1)  # 10% default
     tax_amount = db.Column(db.Float, default=0)
     total = db.Column(db.Float, default=0)
+    odometer_reading = db.Column(db.String(50))
     notes = db.Column(db.Text)
     valid_until = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

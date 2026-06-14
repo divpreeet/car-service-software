@@ -4,12 +4,12 @@
 <div class="row">
     <div class="col-md-8 offset-md-2">
         <h1>Settings</h1>
-        <form method="post" class="mt-4">
+        <form method="post" enctype="multipart/form-data" class="mt-4">
             <div class="card mb-4">
                 <div class="card-header"><h5>Business Information</h5></div>
                 <div class="card-body">
                     {% for key, info in settings.items() %}
-                    {% if key in ['business_name', 'business_address', 'business_phone', 'business_email'] %}
+                    {% if key in ['business_name', 'business_address', 'business_phone', 'business_email', 'tax_number'] %}
                     <div class="mb-3">
                         <label for="{{ key }}" class="form-label">{{ info.label }}</label>
                         {% if info.type == 'email' %}
@@ -20,6 +20,20 @@
                     </div>
                     {% endif %}
                     {% endfor %}
+
+                    <div class="mb-3">
+                        <label class="form-label">Company Logo</label>
+                        {% if settings.logo %}
+                        <div class="mb-2">
+                            <img src="{{ url_for('static', filename='uploads/' + settings.logo) }}" style="max-height:80px;" class="border rounded p-1">
+                            <div class="form-check mt-1">
+                                <input class="form-check-input" type="checkbox" id="remove_logo" name="remove_logo" value="1">
+                                <label class="form-check-label" for="remove_logo">Remove logo</label>
+                            </div>
+                        </div>
+                        {% endif %}
+                        <input type="file" class="form-control" id="logo" name="logo" accept="image/*">
+                    </div>
                 </div>
             </div>
 
@@ -30,14 +44,14 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="default_tax_rate" class="form-label">Default Tax Rate (%)</label>
-                                <input type="number" class="form-control" id="default_tax_rate" name="default_tax_rate" value="{{ settings['default_tax_rate'].value or '10' }}" step="0.1">
+                                <input type="number" class="form-control" id="default_tax_rate" name="default_tax_rate" value="{{ settings['default_tax_rate'].value or '5' }}" step="0.1">
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="default_payment_terms" class="form-label">Default Payment Terms</label>
                                 <select class="form-select" id="default_payment_terms" name="default_payment_terms">
-                                    {% for val, label in [('net15', 'Net 15'), ('net30', 'Net 30'), ('net60', 'Net 60')] %}
+                                    {% for val, label in settings.payment_terms %}
                                     <option value="{{ val }}" {% if settings['default_payment_terms'].value == val %}selected{% endif %}>{{ label }}</option>
                                     {% endfor %}
                                 </select>
@@ -47,8 +61,12 @@
                     <div class="row">
                         <div class="col-md-4">
                             <div class="mb-3">
-                                <label for="currency_symbol" class="form-label">Currency Symbol</label>
-                                <input type="text" class="form-control" id="currency_symbol" name="currency_symbol" value="{{ settings['currency_symbol'].value or '$' }}" maxlength="5">
+                                <label for="currency" class="form-label">Currency</label>
+                                <select class="form-select" id="currency" name="currency">
+                                    {% for code, sym in settings.currencies %}
+                                    <option value="{{ code }}" {% if settings['currency'].value == code %}selected{% endif %}>{{ code }} ({{ sym|safe }})</option>
+                                    {% endfor %}
+                                </select>
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -69,6 +87,7 @@
 
             <div class="mb-3">
                 <button type="submit" class="btn btn-primary">Save Settings</button>
+                <a href="{{ url_for('settings.design') }}" class="btn btn-info">Invoice PDF Design</a>
                 <a href="{{ url_for('main.index') }}" class="btn btn-secondary">Cancel</a>
             </div>
         </form>

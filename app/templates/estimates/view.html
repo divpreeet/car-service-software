@@ -1,7 +1,5 @@
 {% extends "base.html" %}
-
 {% block title %}{{ estimate.estimate_number }} - Car Service Software{% endblock %}
-
 {% block content %}
 <div class="row mb-4">
     <div class="col-md-8">
@@ -15,6 +13,7 @@
             <button type="submit" class="btn btn-success">Convert to Invoice</button>
         </form>
         {% endif %}
+        <a href="{{ url_for('estimates.pdf_estimate', estimate_id=estimate.id) }}" class="btn btn-primary" target="_blank">Save as PDF</a>
     </div>
 </div>
 
@@ -24,8 +23,8 @@
             <div class="card-header">Customer Information</div>
             <div class="card-body">
                 <p><strong>Name:</strong> {{ estimate.customer.name }}</p>
-                <p><strong>Email:</strong> {{ estimate.customer.email or 'N/A' }}</p>
-                <p><strong>Phone:</strong> {{ estimate.customer.phone or 'N/A' }}</p>
+                {% if estimate.customer.email %}<p><strong>Email:</strong> {{ estimate.customer.email }}</p>{% endif %}
+                {% if estimate.customer.phone %}<p><strong>Phone:</strong> {{ estimate.customer.phone }}</p>{% endif %}
             </div>
         </div>
     </div>
@@ -34,8 +33,9 @@
             <div class="card-header">Estimate Details</div>
             <div class="card-body">
                 <p><strong>Status:</strong> <span class="badge bg-secondary">{{ estimate.status|title }}</span></p>
-                <p><strong>Valid Until:</strong> {{ estimate.valid_until.strftime('%B %d, %Y') if estimate.valid_until else 'N/A' }}</p>
+                {% if estimate.valid_until %}<p><strong>Valid Until:</strong> {{ estimate.valid_until.strftime('%B %d, %Y') }}</p>{% endif %}
                 <p><strong>Tax Rate:</strong> {{ (estimate.tax_rate * 100)|int }}%</p>
+                {% if estimate.odometer_reading %}<p><strong>Odometer:</strong> {{ estimate.odometer_reading }}</p>{% endif %}
             </div>
         </div>
     </div>
@@ -63,8 +63,8 @@
                                 <td>{{ item.description }}</td>
                                 <td><span class="badge bg-light text-dark">{{ item.item_type|title }}</span></td>
                                 <td class="text-end">{{ item.quantity }}</td>
-                                <td class="text-end">${{ "%.2f"|format(item.unit_price) }}</td>
-                                <td class="text-end"><strong>${{ "%.2f"|format(item.total) }}</strong></td>
+                                <td class="text-end">{{ currency }}{{ "%.2f"|format(item.unit_price) }}</td>
+                                <td class="text-end"><strong>{{ currency }}{{ "%.2f"|format(item.total) }}</strong></td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -81,16 +81,16 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between mb-2">
                     <span>Subtotal:</span>
-                    <strong>${{ "%.2f"|format(estimate.subtotal) }}</strong>
+                    <strong>{{ currency }}{{ "%.2f"|format(estimate.subtotal) }}</strong>
                 </div>
                 <div class="d-flex justify-content-between mb-2">
                     <span>Tax ({{ (estimate.tax_rate * 100)|int }}%):</span>
-                    <strong>${{ "%.2f"|format(estimate.tax_amount) }}</strong>
+                    <strong>{{ currency }}{{ "%.2f"|format(estimate.tax_amount) }}</strong>
                 </div>
                 <hr>
                 <div class="d-flex justify-content-between" style="font-size: 1.25rem;">
                     <span>Total:</span>
-                    <strong>${{ "%.2f"|format(estimate.total) }}</strong>
+                    <strong>{{ currency }}{{ "%.2f"|format(estimate.total) }}</strong>
                 </div>
             </div>
         </div>

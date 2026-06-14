@@ -44,7 +44,7 @@
                     <tr>
                         <td><strong>{{ estimate.estimate_number }}</strong></td>
                         <td>{{ estimate.customer.name }}</td>
-                        <td>${{ "%.2f"|format(estimate.total) }}</td>
+                        <td>{{ currency }}{{ "%.2f"|format(estimate.total) }}</td>
                         <td><span class="badge bg-secondary">{{ estimate.status|title }}</span></td>
                         <td>{{ estimate.valid_until.strftime('%m/%d/%Y') if estimate.valid_until else '-' }}</td>
                         <td>{{ estimate.created_at.strftime('%m/%d/%Y') }}</td>

@@ -19,6 +19,7 @@ class Invoice(db.Model):
     issue_date = db.Column(db.DateTime, default=datetime.utcnow)
     due_date = db.Column(db.DateTime)
     payment_terms = db.Column(db.String(50))  # net15, net30, net60
+    odometer_reading = db.Column(db.String(50))
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Invoice Design - Car Service Software{% endblock %}
+{% block content %}
+<div class="row">
+    <div class="col-md-10 offset-md-1">
+        <h1>Invoice / Estimate PDF Design</h1>
+        <p class="text-muted">Choose which elements appear on the PDF and where they are placed.</p>
+        <form method="post" class="mt-4">
+            <div class="card mb-4">
+                <div class="card-header"><h5>Elements & Positioning</h5></div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width:30%">Element</th>
+                                    <th style="width:70%">Position</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for key, label, allowed_positions in elements %}
+                                <tr>
+                                    <td>{{ label }}</td>
+                                    <td>
+                                        <select class="form-select form-select-sm" name="pos_{{ key }}" style="max-width:250px;">
+                                            <option value="">-- Hidden --</option>
+                                            {% for pos_key, pos_label in positions %}
+                                                {% if pos_key in allowed_positions %}
+                                                <option value="{{ pos_key }}" {% if layout.get(key) == pos_key %}selected{% endif %}>{{ pos_label }}</option>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </select>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="alert alert-info small">
+                        <strong>Layout preview:</strong> Header elements appear at the top of every page. Body elements
+                        appear in the main content area in the order listed. Footer elements appear at the bottom.
+                    </div>
+                </div>
+            </div>
+            <div class="mb-3">
+                <button type="submit" class="btn btn-primary">Save Design</button>
+                <a href="{{ url_for('settings.edit') }}" class="btn btn-secondary">General Settings</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

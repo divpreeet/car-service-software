@@ -43,9 +43,9 @@
                     <tr>
                         <td><strong>{{ invoice.invoice_number }}</strong></td>
                         <td>{{ invoice.customer.name }}</td>
-                        <td>${{ "%.2f"|format(invoice.total) }}</td>
-                        <td>${{ "%.2f"|format(invoice.paid_amount) }}</td>
-                        <td>${{ "%.2f"|format(invoice.balance_due) }}</td>
+                        <td>{{ currency }}{{ "%.2f"|format(invoice.total) }}</td>
+                        <td>{{ currency }}{{ "%.2f"|format(invoice.paid_amount) }}</td>
+                        <td>{{ currency }}{{ "%.2f"|format(invoice.balance_due) }}</td>
                         <td>
                             {% if invoice.status == 'paid' %}
                                 <span class="badge bg-success">Paid</span>

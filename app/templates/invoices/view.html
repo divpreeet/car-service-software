@@ -1,7 +1,5 @@
 {% extends "base.html" %}
-
 {% block title %}{{ invoice.invoice_number }} - Car Service Software{% endblock %}
-
 {% block content %}
 <div class="row mb-4">
     <div class="col-md-8">
@@ -15,9 +13,15 @@
             <button type="submit" class="btn btn-success">Mark as Sent</button>
         </form>
         {% endif %}
+        {% if invoice.status != 'paid' %}
+        <form method="post" action="{{ url_for('invoices.mark_paid', invoice_id=invoice.id) }}" style="display:inline;">
+            <button type="submit" class="btn btn-success">Mark as Paid</button>
+        </form>
+        {% endif %}
         {% if invoice.balance_due > 0 %}
         <a href="{{ url_for('payments.record_payment', invoice_id=invoice.id) }}" class="btn btn-primary">Record Payment</a>
         {% endif %}
+        <a href="{{ url_for('invoices.pdf_invoice', invoice_id=invoice.id) }}" class="btn btn-primary" target="_blank">Save as PDF</a>
     </div>
 </div>
 
@@ -26,8 +30,27 @@
         <div class="card mb-3">
             <div class="card-header">From</div>
             <div class="card-body">
-                <p><strong>Your Business</strong></p>
-                <p class="text-muted">Service Provider Information</p>
+                <p><strong>{{ business_name or 'Your Business' }}</strong></p>
+                {% if business_address %}<p>{{ business_address }}</p>{% endif %}
+                {% if business_phone %}<p>{{ business_phone }}</p>{% endif %}
+                {% if business_email %}<p>{{ business_email }}</p>{% endif %}
+                {% if tax_number %}<p><strong>Tax No:</strong> {{ tax_number }}</p>{% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header">Vehicle Information</div>
+            <div class="card-body">
+                {% if invoice.customer.vehicle_make or invoice.customer.vehicle_model %}
+                <p><strong>{{ invoice.customer.vehicle_year or '' }} {{ invoice.customer.vehicle_make or '' }} {{ invoice.customer.vehicle_model or '' }}</strong></p>
+                {% endif %}
+                {% if invoice.customer.vehicle_vin %}<p><strong>VIN:</strong> {{ invoice.customer.vehicle_vin }}</p>{% endif %}
+                {% if invoice.customer.vehicle_plate %}<p><strong>Plate:</strong> {{ invoice.customer.vehicle_plate }}</p>{% endif %}
+                {% if invoice.odometer_reading %}<p><strong>Odometer:</strong> {{ invoice.odometer_reading }}</p>{% endif %}
+                {% if not invoice.customer.vehicle_make and not invoice.customer.vehicle_model and not invoice.customer.vehicle_vin and not invoice.customer.vehicle_plate %}
+                <p class="text-muted mb-0">No vehicle information on file</p>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -36,9 +59,10 @@
             <div class="card-header">Bill To</div>
             <div class="card-body">
                 <p><strong>{{ invoice.customer.name }}</strong></p>
-                <p>{{ invoice.customer.address or '' }}</p>
-                <p>{{ invoice.customer.city or '' }}, {{ invoice.customer.state or '' }} {{ invoice.customer.zip_code or '' }}</p>
-                <p>{{ invoice.customer.email or '' }}</p>
+                {% if invoice.customer.phone %}<p>{{ invoice.customer.phone }}</p>{% endif %}
+                {% if invoice.customer.address %}<p>{{ invoice.customer.address }}</p>{% endif %}
+                {% if invoice.customer.city %}<p>{{ invoice.customer.city }}{% if invoice.customer.state %}, {{ invoice.customer.state }}{% endif %} {{ invoice.customer.zip_code or '' }}</p>{% endif %}
+                {% if invoice.customer.email %}<p>{{ invoice.customer.email }}</p>{% endif %}
             </div>
         </div>
     </div>
@@ -63,12 +87,16 @@
                         {% endif %}
                         </p>
                     </div>
+                    {% if invoice.due_date %}
                     <div class="col-md-3">
-                        <p><strong>Due Date:</strong><br>{{ invoice.due_date.strftime('%B %d, %Y') if invoice.due_date else 'N/A' }}</p>
+                        <p><strong>Due Date:</strong><br>{{ invoice.due_date.strftime('%B %d, %Y') }}</p>
                     </div>
+                    {% endif %}
+                    {% if invoice.payment_terms %}
                     <div class="col-md-3">
-                        <p><strong>Payment Terms:</strong><br>{{ invoice.payment_terms or 'N/A' }}</p>
+                        <p><strong>Payment Terms:</strong><br>{{ invoice.payment_terms|title }}</p>
                     </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -97,8 +125,8 @@
                                 <td>{{ item.description }}</td>
                                 <td><span class="badge bg-light text-dark">{{ item.item_type|title }}</span></td>
                                 <td class="text-end">{{ item.quantity }}</td>
-                                <td class="text-end">${{ "%.2f"|format(item.unit_price) }}</td>
-                                <td class="text-end"><strong>${{ "%.2f"|format(item.total) }}</strong></td>
+                                <td class="text-end">{{ currency }}{{ "%.2f"|format(item.unit_price) }}</td>
+                                <td class="text-end"><strong>{{ currency }}{{ "%.2f"|format(item.total) }}</strong></td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -115,24 +143,24 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between mb-2">
                     <span>Subtotal:</span>
-                    <strong>${{ "%.2f"|format(invoice.subtotal) }}</strong>
+                    <strong>{{ currency }}{{ "%.2f"|format(invoice.subtotal) }}</strong>
                 </div>
                 <div class="d-flex justify-content-between mb-2">
                     <span>Tax ({{ (invoice.tax_rate * 100)|int }}%):</span>
-                    <strong>${{ "%.2f"|format(invoice.tax_amount) }}</strong>
+                    <strong>{{ currency }}{{ "%.2f"|format(invoice.tax_amount) }}</strong>
                 </div>
                 <hr>
                 <div class="d-flex justify-content-between mb-3" style="font-size: 1.25rem;">
                     <span>Total:</span>
-                    <strong>${{ "%.2f"|format(invoice.total) }}</strong>
+                    <strong>{{ currency }}{{ "%.2f"|format(invoice.total) }}</strong>
                 </div>
                 <div class="d-flex justify-content-between mb-2">
                     <span>Paid:</span>
-                    <strong>${{ "%.2f"|format(invoice.paid_amount) }}</strong>
+                    <strong>{{ currency }}{{ "%.2f"|format(invoice.paid_amount) }}</strong>
                 </div>
                 <div class="d-flex justify-content-between" style="font-size: 1.1rem;">
                     <span>Balance Due:</span>
-                    <strong class="text-danger">${{ "%.2f"|format(invoice.balance_due) }}</strong>
+                    <strong class="text-danger">{{ currency }}{{ "%.2f"|format(invoice.balance_due) }}</strong>
                 </div>
             </div>
         </div>
@@ -160,7 +188,7 @@
                             {% for payment in invoice.payments %}
                             <tr>
                                 <td>{{ payment.payment_date.strftime('%m/%d/%Y') }}</td>
-                                <td>${{ "%.2f"|format(payment.amount) }}</td>
+                                <td>{{ currency }}{{ "%.2f"|format(payment.amount) }}</td>
                                 <td>{{ payment.payment_method or 'N/A' }}</td>
                                 <td>{{ payment.reference_number or '-' }}</td>
                                 <td>

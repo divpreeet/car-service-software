@@ -9,7 +9,7 @@
                 <div class="col-md-6">
                     <div class="mb-3">
                         <label for="tax_rate" class="form-label">Tax Rate (%)</label>
-                        <input type="number" class="form-control" id="tax_rate" name="tax_rate" value="{{ invoice.tax_rate * 100 if invoice else 10 }}" step="0.1">
+                        <input type="number" class="form-control" id="tax_rate" name="tax_rate" value="{{ invoice.tax_rate * 100 if invoice else default_tax }}" step="0.1">
                     </div>
                 </div>
                 <div class="col-md-6">
@@ -81,6 +81,11 @@
             </div>
             <div class="mb-3">
                 <button type="button" class="btn btn-secondary" id="addLineItem">+ Add Line Item</button>
+            </div>
+            <div class="mb-3">
+                <label for="odometer_reading" class="form-label">Odometer Reading</label>
+                <input type="text" class="form-control" id="odometer_reading" name="odometer_reading"
+                       value="{{ invoice.odometer_reading if invoice else '' }}" placeholder="e.g. 45000 km">
             </div>
             <div class="mb-3">
                 <label for="notes" class="form-label">Notes</label>

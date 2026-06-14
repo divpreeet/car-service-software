@@ -18,6 +18,12 @@ def create_app(config_name=None):
     
     with app.app_context():
         db.create_all()
+        # Migrate existing DBs: add odometer_reading to invoices if missing
+        try:
+            db.session.execute(db.text('ALTER TABLE invoices ADD COLUMN odometer_reading VARCHAR(50)'))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
     
     # Import and register blueprints
     from app.routes.main_bp import bp as main_bp
