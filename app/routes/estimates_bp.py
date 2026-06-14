@@ -9,9 +9,10 @@ bp = Blueprint('estimates', __name__)
 
 def _next_estimate_number():
     prefix = Setting.get('estimate_prefix', 'EST-')
-    last = Estimate.query.order_by(Estimate.id.desc()).first()
-    n = (last.id + 1) if last else 1
-    return f"{prefix}{n:06d}"
+    all_nums = [int(e.estimate_number.replace(prefix, '')) for e in Estimate.query.all() if e.estimate_number.startswith(prefix)]
+    highest = max(all_nums) if all_nums else 0
+    n = max(highest + 1, 1009542)
+    return f"{prefix}{n}"
 
 def _currency():
     currencies = {'USD': '$', 'EUR': '€', 'GBP': '£', 'AED': '\u20C3', 'INR': '₹', 'SAR': '﷼'}
