@@ -22,6 +22,7 @@
         <a href="{{ url_for('payments.record_payment', invoice_id=invoice.id) }}" class="btn btn-primary">Record Payment</a>
         {% endif %}
         <a href="{{ url_for('invoices.pdf_invoice', invoice_id=invoice.id) }}" class="btn btn-primary" target="_blank">Save as PDF</a>
+        <a href="{{ url_for('settlement.settlement_page') }}?invoice_id={{ invoice.id }}" class="btn btn-info text-white">Settlement Summary</a>
     </div>
 </div>
 
@@ -119,6 +120,10 @@
                             <tr>
                                 <th>Description</th>
                                 <th>Type</th>
+                                <th>Parts Type</th>
+                                <th>Source</th>
+                                <th class="text-end">Cost</th>
+                                <th class="text-end">Margin %</th>
                                 <th class="text-end">Quantity</th>
                                 <th class="text-end">Unit Price</th>
                                 <th class="text-end">Total</th>
@@ -129,6 +134,10 @@
                             <tr>
                                 <td>{{ item.description }}</td>
                                 <td><span class="badge bg-light text-dark">{{ item.item_type|title }}</span></td>
+                                <td>{{ item.parts_type|title if item.parts_type else '-' }}</td>
+                                <td>{{ {'workshop':'Wrkshp','ob':'OB'}.get(item.parts_source, item.parts_source) if item.parts_source else '-' }}</td>
+                                <td class="text-end">{{ currency }}{{ "%.2f"|format(item.cost) if item.cost else '-' }}</td>
+                                <td class="text-end">{{ "%.1f"|format(item.margin) if item.margin else '-' }}</td>
                                 <td class="text-end">{{ item.quantity }}</td>
                                 <td class="text-end">{{ currency }}{{ "%.2f"|format(item.unit_price) }}</td>
                                 <td class="text-end"><strong>{{ currency }}{{ "%.2f"|format(item.total) }}</strong></td>
@@ -150,6 +159,13 @@
                     <span>Subtotal:</span>
                     <strong>{{ currency }}{{ "%.2f"|format(invoice.subtotal) }}</strong>
                 </div>
+                {% set total_discount = (invoice.discount_workshop or 0) + (invoice.discount_ob or 0) %}
+                {% if total_discount > 0 %}
+                <div class="d-flex justify-content-between mb-2 text-danger">
+                    <span>Discount:</span>
+                    <strong>-{{ currency }}{{ "%.2f"|format(total_discount) }}</strong>
+                </div>
+                {% endif %}
                 <div class="d-flex justify-content-between mb-2">
                     <span>Tax ({{ (invoice.tax_rate * 100)|int }}%):</span>
                     <strong>{{ currency }}{{ "%.2f"|format(invoice.tax_amount) }}</strong>

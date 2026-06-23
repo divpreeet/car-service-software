@@ -1,3 +1,4 @@
+import sys
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from config import config
@@ -9,7 +10,11 @@ def create_app(config_name=None):
     if config_name is None:
         config_name = os.environ.get('FLASK_ENV', 'development')
     
-    app = Flask(__name__)
+    if getattr(sys, 'frozen', False):
+        base = os.path.dirname(sys.executable)
+        app = Flask(__name__, instance_path=os.path.join(base, 'instance'), instance_relative_config=True)
+    else:
+        app = Flask(__name__, instance_relative_config=True)
     app.config.from_object(config[config_name])
     
     db.init_app(app)
@@ -30,6 +35,14 @@ def create_app(config_name=None):
             'ALTER TABLE workshops ADD COLUMN emirate_state VARCHAR(100)',
             'ALTER TABLE workshops ADD COLUMN country VARCHAR(100)',
             'ALTER TABLE workshops ADD COLUMN zip_code VARCHAR(20)',
+            'ALTER TABLE estimate_line_items ADD COLUMN parts_type VARCHAR(20)',
+            'ALTER TABLE invoice_line_items ADD COLUMN parts_type VARCHAR(20)',
+            'ALTER TABLE estimate_line_items ADD COLUMN parts_source VARCHAR(20)',
+            'ALTER TABLE invoice_line_items ADD COLUMN parts_source VARCHAR(20)',
+            'ALTER TABLE estimates ADD COLUMN discount_workshop FLOAT DEFAULT 0',
+            'ALTER TABLE estimates ADD COLUMN discount_ob FLOAT DEFAULT 0',
+            'ALTER TABLE invoices ADD COLUMN discount_workshop FLOAT DEFAULT 0',
+            'ALTER TABLE invoices ADD COLUMN discount_ob FLOAT DEFAULT 0',
         ]:
             try:
                 db.session.execute(db.text(stmt))
@@ -46,6 +59,7 @@ def create_app(config_name=None):
     from app.routes.reports_bp import bp as reports_bp
     from app.routes.settings_bp import bp as settings_bp
     from app.routes.workshops_bp import bp as workshops_bp
+    from app.routes.settlement_bp import bp as settlement_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(customers_bp)
@@ -55,5 +69,6 @@ def create_app(config_name=None):
     app.register_blueprint(reports_bp)
     app.register_blueprint(settings_bp)
     app.register_blueprint(workshops_bp)
+    app.register_blueprint(settlement_bp)
     
     return app

@@ -45,6 +45,7 @@
                     </li>
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('reports.dashboard') }}">Reports</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('workshops.list_workshops') }}">Workshops</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('settlement.settlement_page') }}">Settlement</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('settings.edit') }}">Settings</a></li>
                 </ul>
             </div>
@@ -72,5 +73,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block scripts %}{% endblock %}
 </body>
 </html>

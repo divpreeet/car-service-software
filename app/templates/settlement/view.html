@@ -1,0 +1,353 @@
+{% extends "base.html" %}
+{% block title %}Settlement Summary - Car Service Software{% endblock %}
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1>Settlement Summary</h1>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="post" action="{{ url_for('settlement.calculate') }}" class="row g-3 align-items-end">
+            <div class="col-md-6">
+                <label for="invoice_id" class="form-label">Select Invoice</label>
+                <select class="form-select" id="invoice_id" name="invoice_id" required>
+                    <option value="">-- Select Invoice --</option>
+                    {% for inv in invoices %}
+                    <option value="{{ inv.id }}" {% if selected_id == inv.id %}selected{% endif %}>{{ inv.invoice_number }} - {{ inv.customer.name }} ({{ inv.issue_date.strftime('%d/%m/%Y') if inv.issue_date else '' }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-6 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">Calculate</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if result %}
+<div class="row">
+    <div class="col-md-7">
+        <div class="card mb-4">
+            <div class="card-header fw-bold">Settlement Summary — {{ invoice.invoice_number }}</div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width:45%">Description</th>
+                            <th style="width:20%" class="text-end">Amount (AED)</th>
+                            <th style="width:35%">Instructions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Labor</td>
+                            <td class="text-end">{{ currency }}{{ "%.2f"|format(result.labor_amount) }}</td>
+                            <td><small class="text-muted">Workshop source</small></td>
+                        </tr>
+                        <tr>
+                            <td>Parts</td>
+                            <td class="text-end">{{ currency }}{{ "%.2f"|format(result.parts_amount) }}</td>
+                            <td><small class="text-muted">Workshop source</small></td>
+                        </tr>
+                        <tr>
+                            <td>Service</td>
+                            <td class="text-end">{{ currency }}{{ "%.2f"|format(result.service_amount) }}</td>
+                            <td><small class="text-muted">Workshop source</small></td>
+                        </tr>
+                        <tr class="table-secondary">
+                            <td><strong>Job Amount (Without VAT)</strong></td>
+                            <td class="text-end"><strong>{{ currency }}{{ "%.2f"|format(result.job_amount) }}</strong></td>
+                            <td><small class="text-muted">Labor + Parts + Service</small></td>
+                        </tr>
+                        {% if result.workshop_discount > 0 %}
+                        <tr>
+                            <td>Workshop Run Promo Discount</td>
+                            <td class="text-end text-danger">-{{ currency }}{{ "%.2f"|format(result.workshop_discount) }}</td>
+                            <td><small class="text-muted">Discount by Wrkshp</small></td>
+                        </tr>
+                        {% endif %}
+                        {% if result.ob_discount > 0 %}
+                        <tr>
+                            <td>OB Run Promo Discount</td>
+                            <td class="text-end text-danger">-{{ currency }}{{ "%.2f"|format(result.ob_discount) }}</td>
+                            <td><small class="text-muted">Discount by OB</small></td>
+                        </tr>
+                        {% endif %}
+                        <tr class="table-secondary">
+                            <td><strong>Net Job Amount (Without VAT)</strong></td>
+                            <td class="text-end"><strong>{{ currency }}{{ "%.2f"|format(result.net_job) }}</strong></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td>VAT (5%)</td>
+                            <td class="text-end">{{ currency }}{{ "%.2f"|format(result.vat) }}</td>
+                            <td></td>
+                        </tr>
+                        <tr class="table-primary">
+                            <td><strong>Customer Payment (A)</strong></td>
+                            <td class="text-end"><strong>{{ currency }}{{ "%.2f"|format(result.customer_payment) }}</strong></td>
+                            <td></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header fw-bold">Gateway Charges</div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width:45%">Description</th>
+                            <th style="width:20%" class="text-end">Amount (AED)</th>
+                            <th style="width:35%">Instructions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Gateway Charges</td>
+                            <td class="text-end">{{ currency }}{{ "%.2f"|format(result.gateway) }}</td>
+                            <td>
+                                <form method="post" action="{{ url_for('settlement.calculate') }}" class="d-inline">
+                                    <input type="hidden" name="invoice_id" value="{{ selected_id }}">
+                                    <input type="hidden" name="comm_labour" value="{{ (result.comm_pct.labour * 100)|int }}">
+                                    <input type="hidden" name="comm_spares" value="{{ (result.comm_pct.spares * 100)|int }}">
+                                    <input type="hidden" name="comm_service" value="{{ (result.comm_pct.service * 100)|int }}">
+                                    <input type="number" name="gateway_pct" class="form-control form-control-sm d-inline" value="{{ (result.gateway_pct * 100)|round(1) }}" step="0.01" min="0" max="100" style="width:60px">%
+                                    + AED
+                                    <input type="number" name="gateway_fixed" class="form-control form-control-sm d-inline" value="{{ result.gateway_fixed }}" step="0.01" min="0" style="width:60px">
+                                    <button type="submit" class="btn btn-sm btn-outline-primary ms-1">Calc</button>
+                                </form>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>VAT on Gateway Charges</td>
+                            <td class="text-end">{{ currency }}{{ "%.2f"|format(result.vat_on_gateway) }}</td>
+                            <td></td>
+                        </tr>
+                        <tr class="table-secondary">
+                            <td><strong>Total Gateway Charges (B)</strong></td>
+                            <td class="text-end"><strong>{{ currency }}{{ "%.2f"|format(result.total_gateway) }}</strong></td>
+                            <td></td>
+                        </tr>
+                        <tr class="table-success">
+                            <td><strong>Payment Received by OB</strong></td>
+                            <td class="text-end"><strong>{{ currency }}{{ "%.2f"|format(result.payment_received_by_ob) }}</strong></td>
+                            <td><small class="text-muted">Invoice Total: {{ currency }}{{ "%.2f"|format(invoice.total) }}</small></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header fw-bold">Workshop Transfer</div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width:45%">Description</th>
+                            <th style="width:20%" class="text-end">Amount (AED)</th>
+                            <th style="width:35%">Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Job Amount to Workshop</td>
+                            <td class="text-end">{{ currency }}{{ "%.2f"|format(result.job_to_workshop) }}</td>
+                            <td><small class="text-muted">({{ "%.2f"|format(result.net_job) }} - {{ "%.2f"|format(result.gateway) }} - {{ "%.2f"|format(result.total_ob_comm) }})</small></td>
+                        </tr>
+                        <tr>
+                            <td>VAT to Workshop</td>
+                            <td class="text-end">{{ currency }}{{ "%.2f"|format(result.vat_to_workshop) }}</td>
+                            <td><small class="text-muted">({{ "%.2f"|format(result.vat) }} - {{ "%.2f"|format(result.vat_on_gateway) }} - {{ "%.2f"|format(result.vat_on_ob_comm) }})</small></td>
+                        </tr>
+                        <tr>
+                            <td>Pickup/Drop Charges</td>
+                            <td class="text-end">{{ currency }}{{ "%.2f"|format(result.pickup_drop_workshop) }}</td>
+                            <td><small class="text-muted">Workshop source</small></td>
+                        </tr>
+                        <tr class="table-info">
+                            <td><strong>Total Transferred to Workshop</strong></td>
+                            <td class="text-end"><strong>{{ currency }}{{ "%.2f"|format(result.total_to_workshop) }}</strong></td>
+                            <td></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-5">
+        <div class="card mb-4">
+            <div class="card-header fw-bold">OB Commission</div>
+            <div class="card-body p-0">
+                <form method="post" action="{{ url_for('settlement.calculate') }}" id="commForm">
+                    <input type="hidden" name="invoice_id" value="{{ selected_id }}">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:36%">Description</th>
+                                <th style="width:18%" class="text-end">Amount</th>
+                                <th style="width:20%" class="text-end">Commission %</th>
+                                <th style="width:26%" class="text-end">Calculated</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Labour</td>
+                                <td class="text-end">{{ currency }}{{ "%.2f"|format(result.labor_amount) }}</td>
+                                <td class="text-end">
+                                    <input type="number" name="comm_labour" class="form-control form-control-sm text-end" value="{{ (result.comm_pct.labour * 100)|int }}" step="1" min="0" max="100" onchange="this.form.submit()" style="width:70px;display:inline">
+                                </td>
+                                <td class="text-end"><strong>{{ currency }}{{ "%.2f"|format(result.labour_commission) }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Spares</td>
+                                <td class="text-end">{{ currency }}{{ "%.2f"|format(result.parts_amount) }}</td>
+                                <td class="text-end">
+                                    <input type="number" name="comm_spares" class="form-control form-control-sm text-end" value="{{ (result.comm_pct.spares * 100)|int }}" step="1" min="0" max="100" onchange="this.form.submit()" style="width:70px;display:inline">
+                                </td>
+                                <td class="text-end"><strong>{{ currency }}{{ "%.2f"|format(result.spares_commission) }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Service</td>
+                                <td class="text-end">{{ currency }}{{ "%.2f"|format(result.service_amount) }}</td>
+                                <td class="text-end">
+                                    <input type="number" name="comm_service" class="form-control form-control-sm text-end" value="{{ (result.comm_pct.service * 100)|int }}" step="1" min="0" max="100" onchange="this.form.submit()" style="width:70px;display:inline">
+                                </td>
+                                <td class="text-end"><strong>{{ currency }}{{ "%.2f"|format(result.service_commission) }}</strong></td>
+                            </tr>
+                            {% if result.ob_discount > 0 %}
+                            <tr>
+                                <td>Discount Given by OB</td>
+                                <td class="text-end"></td>
+                                <td></td>
+                                <td class="text-end text-danger">-{{ currency }}{{ "%.2f"|format(result.ob_discount) }}</td>
+                            </tr>
+                            {% endif %}
+                            <tr class="table-secondary">
+                                <td><strong>Total OB Commission</strong></td>
+                                <td></td>
+                                <td></td>
+                                <td class="text-end"><strong>{{ currency }}{{ "%.2f"|format(result.total_ob_comm) }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td>VAT on OB Commission</td>
+                                <td></td>
+                                <td class="text-end">5%</td>
+                                <td class="text-end">{{ currency }}{{ "%.2f"|format(result.vat_on_ob_comm) }}</td>
+                            </tr>
+                            <tr class="table-warning">
+                                <td><strong>OB Commission (with VAT)</strong></td>
+                                <td></td>
+                                <td></td>
+                                <td class="text-end"><strong>{{ currency }}{{ "%.2f"|format(result.ob_comm_with_vat) }}</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </form>
+            </div>
+        </div>
+
+        <div class="d-grid gap-2 mb-4">
+            <a href="{{ url_for('settlement.settlement_pdf', invoice_id=invoice.id, comm_labour=result.comm_pct.labour*100, comm_spares=result.comm_pct.spares*100, comm_service=result.comm_pct.service*100) }}" class="btn btn-primary btn-lg" target="_blank">Save as PDF</a>
+        </div>
+
+        {% set labor_revenue = result.labor_total - result.labor_amount %}
+        {% set service_revenue = result.service_total - result.service_amount %}
+        <div class="card mb-4">
+            <div class="card-header fw-bold">OB INCOME</div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Description</th>
+                            <th class="text-end">Cost</th>
+                            <th class="text-end">Total</th>
+                            <th class="text-end">Income</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Total OB Commission</td>
+                            <td class="text-end">-</td>
+                            <td class="text-end">-</td>
+                            <td class="text-end">{{ currency }}{{ "%.2f"|format(result.total_ob_comm) }}</td>
+                        </tr>
+                        {% if result.pickup_drop_ob > 0 %}
+                        <tr>
+                            <td>Pickup-Drop by OB</td>
+                            <td class="text-end">{{ currency }}{{ "%.2f"|format(result.pickup_drop_ob_cost) }}</td>
+                            <td class="text-end">{{ currency }}{{ "%.2f"|format(result.pickup_drop_ob_total) }}</td>
+                            <td class="text-end">{{ currency }}{{ "%.2f"|format(result.pickup_drop_ob_total - result.pickup_drop_ob_cost) }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if result.ob_labor_amount > 0 %}
+                        <tr>
+                            <td>Additional Labour OB</td>
+                            <td class="text-end">{{ currency }}{{ "%.2f"|format(result.ob_labor_cost) }}</td>
+                            <td class="text-end">{{ currency }}{{ "%.2f"|format(result.ob_labor_total) }}</td>
+                            <td class="text-end">{{ currency }}{{ "%.2f"|format(result.ob_labor_amount) }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if labor_revenue > 0 %}
+                        <tr>
+                            <td>Labor (OB)</td>
+                            <td class="text-end">{{ currency }}{{ "%.2f"|format(result.labor_amount) }}</td>
+                            <td class="text-end">{{ currency }}{{ "%.2f"|format(result.labor_total) }}</td>
+                            <td class="text-end">{{ currency }}{{ "%.2f"|format(labor_revenue) }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if result.ob_parts_amount > 0 %}
+                        <tr>
+                            <td>Parts (OB)</td>
+                            <td class="text-end">{{ currency }}{{ "%.2f"|format(result.ob_parts_cost) }}</td>
+                            <td class="text-end">{{ currency }}{{ "%.2f"|format(result.ob_parts_total) }}</td>
+                            <td class="text-end">{{ currency }}{{ "%.2f"|format(result.ob_parts_amount) }}</td>
+                        </tr>
+                        {% endif %}
+                        {% set parts_wrkshp_revenue = result.parts_total - result.parts_amount %}
+                        <tr>
+                            <td>Parts (Wrkshp)</td>
+                            <td class="text-end">{{ currency }}{{ "%.2f"|format(result.parts_amount) }}</td>
+                            <td class="text-end">{{ currency }}{{ "%.2f"|format(result.parts_total) }}</td>
+                            <td class="text-end">{{ currency }}{{ "%.2f"|format(parts_wrkshp_revenue) }}</td>
+                        </tr>
+                        <tr>
+                            <td>Service (OB)</td>
+                            <td class="text-end">{{ currency }}{{ "%.2f"|format(result.service_amount) }}</td>
+                            <td class="text-end">{{ currency }}{{ "%.2f"|format(result.service_total) }}</td>
+                            <td class="text-end">{{ currency }}{{ "%.2f"|format(service_revenue) }}</td>
+                        </tr>
+                        {% set ob_revenue_total = result.total_ob_comm + ((result.pickup_drop_ob_total or 0) - (result.pickup_drop_ob_cost or 0)) + (result.ob_labor_amount or 0) + labor_revenue + (result.ob_parts_amount or 0) + parts_wrkshp_revenue + service_revenue %}
+                        <tr class="fw-bold">
+                            <td>TOTAL EXCL. VAT</td>
+                            <td></td>
+                            <td></td>
+                            <td class="text-end">{{ currency }}{{ "%.2f"|format(ob_revenue_total) }}</td>
+                        </tr>
+                        {% set vat_amount = ob_revenue_total * (invoice.tax_rate) %}
+                        <tr>
+                            <td>VAT ({{ (invoice.tax_rate * 100)|int }}%)</td>
+                            <td></td>
+                            <td></td>
+                            <td class="text-end">{{ currency }}{{ "%.2f"|format(vat_amount) }}</td>
+                        </tr>
+                        <tr class="table-warning fw-bold">
+                            <td>Total Incl. VAT</td>
+                            <td></td>
+                            <td></td>
+                            <td class="text-end">{{ currency }}{{ "%.2f"|format(ob_revenue_total + vat_amount) }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

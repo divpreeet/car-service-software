@@ -18,6 +18,8 @@ class Invoice(db.Model):
     tax_rate = db.Column(db.Float, default=0.1)
     tax_amount = db.Column(db.Float, default=0)
     total = db.Column(db.Float, default=0)
+    discount_workshop = db.Column(db.Float, default=0)
+    discount_ob = db.Column(db.Float, default=0)
     paid_amount = db.Column(db.Float, default=0)
     balance_due = db.Column(db.Float, default=0)
     issue_date = db.Column(db.DateTime, default=datetime.utcnow)
@@ -37,8 +39,9 @@ class Invoice(db.Model):
     
     def calculate_totals(self):
         self.subtotal = sum(item.total for item in self.line_items)
-        self.tax_amount = self.subtotal * self.tax_rate
-        self.total = self.subtotal + self.tax_amount
+        after_discount = self.subtotal - (self.discount_workshop or 0) - (self.discount_ob or 0)
+        self.tax_amount = max(after_discount, 0) * self.tax_rate
+        self.total = max(after_discount, 0) + self.tax_amount
         self.balance_due = self.total - self.paid_amount
         self.update_status()
     
@@ -68,6 +71,8 @@ class Invoice(db.Model):
             'tax_rate': float(self.tax_rate),
             'tax_amount': float(self.tax_amount),
             'total': float(self.total),
+            'discount_workshop': float(self.discount_workshop or 0),
+            'discount_ob': float(self.discount_ob or 0),
             'paid_amount': float(self.paid_amount),
             'balance_due': float(self.balance_due),
             'issue_date': self.issue_date.isoformat(),
@@ -87,6 +92,10 @@ class InvoiceLineItem(db.Model):
     invoice_id = db.Column(db.Integer, db.ForeignKey('invoices.id'), nullable=False)
     description = db.Column(db.String(255), nullable=False)
     item_type = db.Column(db.String(50))  # labor, parts, service
+    parts_type = db.Column(db.String(20))  # original, aftermarket, used
+    parts_source = db.Column(db.String(20))  # workshop, ob
+    cost = db.Column(db.Float)
+    margin = db.Column(db.Float)
     quantity = db.Column(db.Float, default=1)
     unit_price = db.Column(db.Float, nullable=False)
     total = db.Column(db.Float)
@@ -104,6 +113,10 @@ class InvoiceLineItem(db.Model):
             'invoice_id': self.invoice_id,
             'description': self.description,
             'item_type': self.item_type,
+            'parts_type': self.parts_type,
+            'parts_source': self.parts_source,
+            'cost': float(self.cost) if self.cost else None,
+            'margin': float(self.margin) if self.margin else None,
             'quantity': float(self.quantity),
             'unit_price': float(self.unit_price),
             'total': float(self.total),

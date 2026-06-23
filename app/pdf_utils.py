@@ -1,4 +1,4 @@
-import os, json
+import os, json, re
 from io import BytesIO
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
@@ -126,6 +126,15 @@ def _in_header(layout, key):
 
 def _header_footer(canvas_obj, doc):
     canvas_obj.saveState()
+    # Set PDF metadata (directly on canvas for reliability)
+    meta_title = getattr(doc, '_pdf_meta_title', None)
+    if meta_title:
+        canvas_obj.setTitle(meta_title)
+    meta_subject = getattr(doc, '_pdf_meta_subject', None)
+    if meta_subject:
+        canvas_obj.setSubject(meta_subject)
+    canvas_obj.setCreator('Car Service Software')
+
     biz = _get_settings()
     layout = _get_layout()
 
@@ -169,6 +178,8 @@ def _header_footer(canvas_obj, doc):
         canvas_obj.setFont('Helvetica', 7)
         canvas_obj.setFillColor(_GRAY)
         company = f"{biz['business_name']} | {biz['business_address']} | {biz['business_phone']}"
+        if biz['tax_number']:
+            company += f" | VAT: {biz['tax_number']}"
 
         def _draw(region, text):
             if not text:
@@ -198,12 +209,20 @@ class _PDFDocTemplate(BaseDocTemplate):
         self.addPageTemplates([PageTemplate(id='main', frames=frame, onPage=_header_footer)])
 
 
-def build_pdf(title, doc_type_label, doc_number, entity, items, subtotal, tax_rate, tax_amount, total, notes="", date_label="Date", date_value=None, due_label=None, due_value=None, vehicle_info="", workshop_info=""):
+def _sanitize_filename(s):
+    return re.sub(r'[\\/*?:"<>|]', '', s).strip()
+
+def build_pdf(title, doc_type_label, doc_number, entity, items, subtotal, tax_rate, tax_amount, total, notes="", date_label="Date", date_value=None, due_label=None, due_value=None, vehicle_info="", workshop_info="", customer_name="", discount_workshop=0, discount_ob=0):
     buf = BytesIO()
+    pdf_title = f"{title} {doc_number}"
+    if customer_name:
+        pdf_title += f" - {customer_name}"
     doc = _PDFDocTemplate(buf, pagesize=A4, leftMargin=MARGIN, rightMargin=MARGIN,
                           topMargin=MARGIN, bottomMargin=MARGIN + 8*mm)
 
-    # Store for _header_footer
+    # Store metadata for _header_footer to set on canvas
+    doc._pdf_meta_title = pdf_title
+    doc._pdf_meta_subject = doc_type_label
     doc._doc_label = title.upper()
     doc._doc_number = doc_number
 
@@ -273,25 +292,6 @@ def build_pdf(title, doc_type_label, doc_number, entity, items, subtotal, tax_ra
         elements.append(Spacer(1, 6*mm))
         elements.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor('#2563eb'), spaceAfter=2*mm))
 
-    # --- Info strip: tax-number ---
-    info_cells = []
-    if biz['tax_number'] and _in_body(layout, 'tax_number'):
-        info_cells.append(Paragraph(
-            f"<font color='{_ORANGE_HEX}' size='7'><b>TAX NO.</b></font><br/>{biz['tax_number']}",
-            styles['Small']))
-
-    if info_cells:
-        n = len(info_cells)
-        it = Table([info_cells], colWidths=[aw / n] * n)
-        it.setStyle(TableStyle([
-            ('VALIGN', (0,0), (-1,-1), 'TOP'),
-            ('TOPPADDING', (0,0), (-1,-1), 4),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 6),
-            ('BACKGROUND', (0,0), (-1,-1), _LIGHT_GRAY),
-        ]))
-        elements.append(it)
-        elements.append(Spacer(1, 6*mm))
-
     # --- Bill To + Vehicle Info + Workshop (3-column) ---
     show_bill = _in_body(layout, 'bill_to')
     show_veh = _in_body(layout, 'vehicle_info') and vehicle_info
@@ -324,6 +324,7 @@ def build_pdf(title, doc_type_label, doc_number, entity, items, subtotal, tax_ra
             ('TOPPADDING', (0,0), (-1,-1), 2),
             ('BOTTOMPADDING', (0,0), (-1,-1), 2),
             ('LEFTPADDING', (0,0), (-1,-1), 24),
+            ('LEFTPADDING', (0,0), (0,0), 4),
             ('RIGHTPADDING', (0,0), (0,0), 38),
             ('RIGHTPADDING', (1,0), (1,0), 64),
         ]))
@@ -342,9 +343,13 @@ def build_pdf(title, doc_type_label, doc_number, entity, items, subtotal, tax_ra
         ]
         rows = []
         for i, item in enumerate(items, 1):
+            desc_html = f"<b>{item['description']}</b>"
+            pt = item.get('parts_type', '')
+            if pt:
+                desc_html += f"<br/><font size='6' color='#666666'>Parts: {pt.title()}</font>"
             rows.append([
                 str(i),
-                Paragraph(f"<b>{item['description']}</b>", styles['Small']),
+                Paragraph(desc_html, styles['Small']),
                 item.get('item_type', '').title(),
                 str(item['quantity']),
                 f"{cur}{item['unit_price']:.2f}",
@@ -381,9 +386,15 @@ def build_pdf(title, doc_type_label, doc_number, entity, items, subtotal, tax_ra
 
     # --- Totals ---
     if _in_body(layout, 'totals'):
+        total_discount = discount_workshop + discount_ob
         trows = [
             [Paragraph('Subtotal', styles['Small']), Paragraph(f"{cur}{subtotal:.2f}", styles['TotalValue'])],
         ]
+        if total_discount > 0:
+            trows.append([
+                Paragraph('Discount', styles['Small']),
+                Paragraph(f"-{cur}{total_discount:.2f}", styles['TotalValue']),
+            ])
         if tax_rate > 0:
             trows.append([
                 Paragraph(f'Tax ({tax_rate*100:.0f}%)', styles['Small']),
@@ -417,6 +428,223 @@ def build_pdf(title, doc_type_label, doc_number, entity, items, subtotal, tax_ra
             f"<font color='{_ORANGE_HEX}' size='7'><b>NOTES</b></font><br/>"
             f"<font size='8'><i>{notes}</i></font>",
             styles['Normal']))
+
+    doc.build(elements)
+    buf.seek(0)
+    return buf
+
+
+def build_settlement_pdf(invoice, result, cur):
+    from datetime import datetime
+    buf = BytesIO()
+    doc_title = f"Settlement Summary - {invoice.invoice_number}"
+    doc = _PDFDocTemplate(buf, pagesize=A4, leftMargin=MARGIN, rightMargin=MARGIN,
+                          topMargin=MARGIN, bottomMargin=MARGIN + 8*mm)
+    doc._pdf_meta_title = doc_title
+    doc._pdf_meta_subject = "Settlement Summary"
+
+    styles = getSampleStyleSheet()
+    biz = _get_settings()
+    layout = _get_layout()
+    aw = PAGE_W - 2 * MARGIN
+
+    styles.add(ParagraphStyle('Small', parent=styles['Normal'], fontSize=8, leading=11))
+    styles.add(ParagraphStyle('Bold8', parent=styles['Normal'], fontSize=8, leading=11, fontName='Helvetica-Bold', textColor=colors.white))
+    styles.add(ParagraphStyle('GrayLabel', parent=styles['Normal'], fontSize=7, leading=9, textColor=_GRAY, fontName='Helvetica-Bold'))
+    styles.add(ParagraphStyle('TotalValue', parent=styles['Normal'], fontSize=8, leading=11, alignment=TA_RIGHT))
+    styles.add(ParagraphStyle('TotalLarge', parent=styles['Normal'], fontSize=12, leading=15, fontName='Helvetica-Bold', alignment=TA_RIGHT))
+    styles.add(ParagraphStyle('TotalOrange', parent=styles['Normal'], fontSize=14, leading=17, fontName='Helvetica-Bold', alignment=TA_RIGHT, textColor=_ORANGE))
+
+    elements = []
+    elements.append(Spacer(1, -1))
+
+    # Title
+    elements.append(Paragraph(f"<font color='{_ORANGE_HEX}' size='20'><b>SETTLEMENT SUMMARY</b></font>", styles['Normal']))
+    elements.append(Spacer(1, 4*mm))
+    elements.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor('#2563eb'), spaceAfter=3*mm))
+
+    def section(title):
+        elements.append(Paragraph(f"<font color='{_ORANGE_HEX}' size='9'><b>{title.upper()}</b></font>", styles['Normal']))
+        elements.append(Spacer(1, 2*mm))
+
+    def row(label, value, note='', bold=False, color=None):
+        c = color or colors.black
+        lbl = Paragraph(f"<font color='{color_to_hex(c)}'>{'<b>' if bold else ''}{label}{'</b>' if bold else ''}</font>", styles['Small'])
+        val = Paragraph(f"{'<b>' if bold else ''}{cur}{value:.2f}{'</b>' if bold else ''}", styles['TotalValue'])
+        cells = [lbl, val]
+        if note:
+            cells.append(Paragraph(f"<font size='6' color='#999999'>{note}</font>", styles['Small']))
+        else:
+            cells.append(Paragraph('', styles['Small']))
+        return cells
+
+    def make_table(rows, col_widths=None):
+        if col_widths is None:
+            col_widths = [aw * 0.45, aw * 0.20, aw * 0.35]
+        t = Table(rows, colWidths=col_widths)
+        ts = [
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('TOPPADDING', (0,0), (-1,-1), 2),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 2),
+            ('LEFTPADDING', (0,0), (-1,-1), 4),
+            ('RIGHTPADDING', (0,0), (-1,-1), 4),
+            ('FONTSIZE', (0,0), (-1,-1), 8),
+        ]
+        for i in range(len(rows)):
+            if i % 2 == 1:
+                ts.append(('BACKGROUND', (0,i), (-1,i), _ROW_ALT))
+        t.setStyle(TableStyle(ts))
+        return t
+
+    def color_to_hex(c):
+        return '#' + ''.join(f'{int(x*255):02x}' for x in (c.red, c.green, c.blue))
+
+    # Vehicle & invoice info
+    v = invoice.vehicle
+    vehicle_str = ''
+    if v:
+        parts = []
+        if v.year or v.make or v.model:
+            parts.append(f"{v.year or ''} {v.make or ''} {v.model or ''}".strip())
+        if v.plate:
+            parts.append(f"Plate: {v.plate}")
+        if v.vin:
+            parts.append(f"VIN: {v.vin}")
+        vehicle_str = ' | '.join(parts)
+    issue_str = invoice.issue_date.strftime('%d-%m-%Y') if invoice.issue_date else ''
+    info_parts = [invoice.invoice_number]
+    if vehicle_str:
+        info_parts.append(vehicle_str)
+    if issue_str:
+        info_parts.append(issue_str)
+    elements.append(Paragraph(f"<font size='10'>{' | '.join(info_parts)}</font>", styles['Normal']))
+    elements.append(Spacer(1, 3*mm))
+
+    # Main settlement table
+    section('Job Amount')
+    rows1 = [
+        [Paragraph('<b>Description</b>', styles['Bold8']),
+         Paragraph('<b>Amount</b>', styles['Bold8']),
+         Paragraph('<b>Instructions</b>', styles['Bold8'])],
+        row('Labor', result['labor_amount'], 'Workshop source'),
+        row('Parts', result['parts_amount'], 'Workshop source'),
+        row('Service', result['service_amount'], 'Workshop source'),
+        row('Job Amount (Without VAT)', result['job_amount'], 'Labor + Parts + Service', True, _THICK),
+    ]
+    if result['workshop_discount'] > 0:
+        rows1.append(row('Workshop Run Promo Discount', result['workshop_discount'], 'Discount by Wrkshp', False, colors.HexColor('#dc3545')))
+    if result['ob_discount'] > 0:
+        rows1.append(row('OB Run Promo Discount', result['ob_discount'], 'Discount by OB', False, colors.HexColor('#dc3545')))
+    rows1.append(row('Net Job Amount (Without VAT)', result['net_job'], '', True, _THICK))
+    rows1.append(row(f'VAT (5%)', result['vat'], ''))
+    rows1.append([Paragraph('<b>Customer Payment (A)</b>', styles['Small']),
+                  Paragraph(f"<b>{cur}{result['customer_payment']:.2f}</b>", styles['TotalLarge']),
+                  Paragraph('', styles['Small'])])
+
+    t1 = make_table(rows1)
+    t1.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), _THICK),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+        ('LINEABOVE', (3,0), (-1,0), 1, _THICK),
+        ('LINEBELOW', (0,0), (-1,0), 0.4, _BORDER),
+    ]))
+    elements.append(t1)
+    elements.append(Spacer(1, 4*mm))
+
+    # Gateway charges
+    section('Gateway Charges')
+    rows2 = [
+        [Paragraph('<b>Description</b>', styles['Bold8']),
+         Paragraph('<b>Amount</b>', styles['Bold8']),
+         Paragraph('<b>Instructions</b>', styles['Bold8'])],
+        row('Gateway Charges', result['gateway'], '2.5% + AED 1'),
+        row('VAT on Gateway Charges', result['vat_on_gateway'], ''),
+        row('Total Gateway Charges (B)', result['total_gateway'], '', True, _THICK),
+        [Paragraph('<b>Payment Received by OB</b>', styles['Small']),
+         Paragraph(f"<b>{cur}{result['payment_received_by_ob']:.2f}</b>", styles['TotalLarge']),
+         Paragraph('', styles['Small'])],
+    ]
+    t2 = make_table(rows2)
+    t2.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), _THICK),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+    ]))
+    elements.append(t2)
+    elements.append(Spacer(1, 4*mm))
+
+    # OB Commission
+    section('OB Commission')
+    pct = result.get('comm_pct', {})
+    rows3 = [
+        [Paragraph('<b>Description</b>', styles['Bold8']),
+         Paragraph('<b>Amount</b>', styles['Bold8']),
+         Paragraph('<b>%</b>', styles['Bold8'])],
+        row('Labour', result['labour_commission'], f"{pct.get('labour', 0.2)*100:.0f}%"),
+        row('Spares', result['spares_commission'], f"{pct.get('spares', 0.1)*100:.0f}%"),
+        row('Service', result['service_commission'], f"{pct.get('service', 0.1)*100:.0f}%"),
+    ]
+    if result['ob_discount'] > 0:
+        rows3.append(row('Discount Given by OB', -result['ob_discount'], '', False, colors.HexColor('#dc3545')))
+    rows3.append(row('Total OB Commission', result['total_ob_comm'], '', True, _THICK))
+    rows3.append(row('VAT on OB Commission', result['vat_on_ob_comm'], '5%'))
+    rows3.append([Paragraph('<b>OB Commission (with VAT)</b>', styles['Small']),
+                  Paragraph(f"<b>{cur}{result['ob_comm_with_vat']:.2f}</b>", styles['TotalLarge']),
+                  Paragraph('', styles['Small'])])
+    t3 = make_table(rows3)
+    t3.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), _THICK),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+    ]))
+    elements.append(t3)
+    elements.append(Spacer(1, 4*mm))
+
+    # OB Additional Items
+    ob_labor = result.get('ob_labor_amount', 0)
+    ob_parts = result.get('ob_parts_amount', 0)
+    ob_pickup = result.get('pickup_drop_ob', 0)
+    if ob_labor > 0 or ob_parts > 0 or ob_pickup > 0:
+        section('OB Additional Items')
+        ob_rows = [
+            [Paragraph('<b>Description</b>', styles['Bold8']),
+             Paragraph('<b>Amount</b>', styles['Bold8']),
+             Paragraph('', styles['Small'])],
+        ]
+        ob_rows.append([Paragraph('<b>Total OB Commission</b>', styles['Small']),
+                        Paragraph(f'{cur}{result["total_ob_comm"]:.2f}', styles['TotalValue']),
+                        Paragraph('', styles['Small'])])
+        if ob_pickup > 0:
+            ob_rows.append(row('Pickup-Drop by OB', ob_pickup, ''))
+        if ob_labor > 0:
+            ob_rows.append(row('Labour (OB)', ob_labor, ''))
+        if ob_parts > 0:
+            ob_rows.append(row('Parts (OB)', ob_parts, ''))
+        ob_table = make_table(ob_rows)
+        ob_table.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), _THICK),
+            ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+        ]))
+        elements.append(ob_table)
+        elements.append(Spacer(1, 12))
+
+    # Workshop Transfer
+    section('Workshop Transfer')
+    rows4 = [
+        [Paragraph('<b>Description</b>', styles['Bold8']),
+         Paragraph('<b>Amount</b>', styles['Bold8']),
+         Paragraph('<b>Notes</b>', styles['Bold8'])],
+        row('Job Amount to Workshop', result['job_to_workshop'], f'({cur}{result["net_job"]:.2f} - {cur}{result["gateway"]:.2f} - {cur}{result["total_ob_comm"]:.2f})'),
+        row('VAT to Workshop', result['vat_to_workshop'], f'({cur}{result["vat"]:.2f} - {cur}{result["vat_on_gateway"]:.2f} - {cur}{result["vat_on_ob_comm"]:.2f})'),
+        row('Pickup/Drop Charges', result.get('pickup_drop_workshop', 0), 'Workshop source'),
+        [Paragraph('<b>Total Transferred to Workshop</b>', styles['Small']),
+         Paragraph(f"<font color='{_ORANGE_HEX}'><b>{cur}{result['total_to_workshop']:.2f}</b></font>", styles['TotalOrange']),
+         Paragraph('', styles['Small'])],
+    ]
+    t4 = make_table(rows4)
+    t4.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), _THICK),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+    ]))
+    elements.append(t4)
 
     doc.build(elements)
     buf.seek(0)

@@ -52,54 +52,125 @@
                 <textarea class="form-control" id="description" name="description" rows="3">{{ estimate.description if estimate else '' }}</textarea>
             </div>
 
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="discount_workshop" class="form-label">Discount by Wrkshp</label>
+                        <input type="number" class="form-control" id="discount_workshop" name="discount_workshop" value="{{ estimate.discount_workshop or 0 }}" step="0.01" min="0">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="discount_ob" class="form-label">Discount by OB</label>
+                        <input type="number" class="form-control" id="discount_ob" name="discount_ob" value="{{ estimate.discount_ob or 0 }}" step="0.01" min="0">
+                    </div>
+                </div>
+            </div>
+
             <hr>
             <h5>Line Items</h5>
             <input type="hidden" id="lineItemsCount" name="line_items_count" value="{{ estimate.line_items|length if estimate else 1 }}">
-            
+            <div class="row mb-1 fw-bold small text-muted">
+                <div class="col-md-3">Description</div>
+                <div class="col-md-2">Type</div>
+                <div class="col-md-1">Parts Type</div>
+                <div class="col-md-1">Source</div>
+                <div class="col-md-1">Cost</div>
+                <div class="col-md-1">Margin %</div>
+                <div class="col-md-1">Qty</div>
+                <div class="col-md-1">Price</div>
+                <div class="col-md-1"></div>
+            </div>
             <div id="lineItemsContainer">
                 {% if estimate and estimate.line_items %}
                     {% for item in estimate.line_items %}
                     <div class="line-item row mb-2">
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <input type="text" name="line_items[{{ loop.index0 }}][description]" class="form-control" placeholder="Description" value="{{ item.description }}" required>
                         </div>
                         <div class="col-md-2">
-                            <select name="line_items[{{ loop.index0 }}][item_type]" class="form-select">
+                            <select name="line_items[{{ loop.index0 }}][item_type]" class="form-select" required>
+                                <option value="">-- Type --</option>
                                 <option value="service" {% if item.item_type == 'service' %}selected{% endif %}>Service</option>
                                 <option value="parts" {% if item.item_type == 'parts' %}selected{% endif %}>Parts</option>
                                 <option value="labor" {% if item.item_type == 'labor' %}selected{% endif %}>Labor</option>
+                                <option value="pickup_drop" {% if item.item_type == 'pickup_drop' %}selected{% endif %}>Pickup-Drop</option>
                             </select>
                         </div>
-                        <div class="col-md-2">
+                        <div class="col-md-1">
+                            <select name="line_items[{{ loop.index0 }}][parts_type]" class="form-select">
+                                <option value="">--</option>
+                                <option value="original" {% if item.parts_type == 'original' %}selected{% endif %}>Original</option>
+                                <option value="aftermarket" {% if item.parts_type == 'aftermarket' %}selected{% endif %}>Aftermarket</option>
+                                <option value="used" {% if item.parts_type == 'used' %}selected{% endif %}>Used</option>
+                            </select>
+                        </div>
+                        <div class="col-md-1">
+                            <select name="line_items[{{ loop.index0 }}][parts_source]" class="form-select" required>
+                                <option value="">-- Source --</option>
+                                <option value="workshop" {% if item.parts_source == 'workshop' %}selected{% endif %}>Wrkshp</option>
+                                <option value="ob" {% if item.parts_source == 'ob' %}selected{% endif %}>OB</option>
+                            </select>
+                        </div>
+                        <div class="col-md-1">
+                            <input type="number" name="line_items[{{ loop.index0 }}][cost]" class="form-control line-cost" placeholder="Cost" value="{{ item.cost if item.cost is not none else '' }}" step="0.01">
+                        </div>
+                        <div class="col-md-1">
+                            <input type="number" name="line_items[{{ loop.index0 }}][margin]" class="form-control line-margin" placeholder="%" value="{{ item.margin if item.margin is not none else '' }}" step="0.01" min="0">
+                        </div>
+                        <div class="col-md-1">
                             <input type="number" name="line_items[{{ loop.index0 }}][quantity]" class="form-control" placeholder="Qty" value="{{ item.quantity }}" step="0.01" required>
                         </div>
-                        <div class="col-md-2">
-                            <input type="number" name="line_items[{{ loop.index0 }}][unit_price]" class="form-control" placeholder="Price" value="{{ item.unit_price }}" step="0.01" required>
+                        <div class="col-md-1">
+                            <input type="number" name="line_items[{{ loop.index0 }}][unit_price]" class="form-control line-price" placeholder="Price" value="{{ item.unit_price }}" step="0.01" required>
                         </div>
-                        <div class="col-md-2">
+                        <div class="col-md-1">
                             <button type="button" class="btn btn-danger btn-sm" onclick="removeLineItem(this)">Remove</button>
                         </div>
                     </div>
                     {% endfor %}
                 {% else %}
                     <div class="line-item row mb-2">
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <input type="text" name="line_items[0][description]" class="form-control" placeholder="Description" required>
                         </div>
                         <div class="col-md-2">
-                            <select name="line_items[0][item_type]" class="form-select">
+                            <select name="line_items[0][item_type]" class="form-select" required>
+                                <option value="">-- Type --</option>
                                 <option value="service">Service</option>
                                 <option value="parts">Parts</option>
                                 <option value="labor">Labor</option>
+                                <option value="pickup_drop">Pickup-Drop</option>
                             </select>
                         </div>
-                        <div class="col-md-2">
+                        <div class="col-md-1">
+                            <select name="line_items[0][parts_type]" class="form-select">
+                                <option value="">--</option>
+                                <option value="original">Original</option>
+                                <option value="aftermarket">Aftermarket</option>
+                                <option value="used">Used</option>
+                            </select>
+                        </div>
+                        <div class="col-md-1">
+                            <select name="line_items[0][parts_source]" class="form-select" required>
+                                <option value="">-- Source --</option>
+                                <option value="workshop">Wrkshp</option>
+                                <option value="ob">OB</option>
+                            </select>
+                        </div>
+                        <div class="col-md-1">
+                            <input type="number" name="line_items[0][cost]" class="form-control line-cost" placeholder="Cost" step="0.01">
+                        </div>
+                        <div class="col-md-1">
+                            <input type="number" name="line_items[0][margin]" class="form-control line-margin" placeholder="%" step="0.01" min="0">
+                        </div>
+                        <div class="col-md-1">
                             <input type="number" name="line_items[0][quantity]" class="form-control" placeholder="Qty" value="1" step="0.01" required>
                         </div>
-                        <div class="col-md-2">
-                            <input type="number" name="line_items[0][unit_price]" class="form-control" placeholder="Price" step="0.01" required>
+                        <div class="col-md-1">
+                            <input type="number" name="line_items[0][unit_price]" class="form-control line-price" placeholder="Price" step="0.01" required>
                         </div>
-                        <div class="col-md-2">
+                        <div class="col-md-1">
                             <button type="button" class="btn btn-danger btn-sm" onclick="removeLineItem(this)">Remove</button>
                         </div>
                     </div>

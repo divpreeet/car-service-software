@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file
 from markupsafe import Markup
-from app.pdf_utils import build_pdf
+from app.pdf_utils import build_pdf, _sanitize_filename
 from app.models import Customer, Estimate, EstimateLineItem, Setting
 from app import db
 from datetime import datetime
@@ -19,8 +19,8 @@ def _currency():
     code = Setting.get('currency', 'USD')
     sym = currencies.get(code, '$')
     if code == 'AED':
-        return Markup('<img src="/static/images/aed.svg" alt="AED" style="height:1.1em;vertical-align:middle">')
-    return sym
+        return Markup('<img src="/static/images/aed.svg" alt="AED" style="height:0.8em;vertical-align:middle">&nbsp;')
+    return sym + ' '
 
 @bp.route('/estimates/')
 def list_estimates():
@@ -43,6 +43,8 @@ def create_estimate():
             odometer_reading=request.form.get('odometer_reading', ''),
             notes=request.form.get('notes', ''),
             tax_rate=float(request.form.get('tax_rate', 5)) / 100,
+            discount_workshop=float(request.form.get('discount_workshop', 0)),
+            discount_ob=float(request.form.get('discount_ob', 0)),
         )
         valid_until_str = request.form.get('valid_until')
         if valid_until_str:
@@ -55,17 +57,26 @@ def create_estimate():
             desc = request.form.get(f'line_items[{i}][description]')
             if not desc:
                 continue
+            cost = request.form.get(f'line_items[{i}][cost]', type=float) or None
+            margin = request.form.get(f'line_items[{i}][margin]', type=float) or None
+            if margin is not None and cost is not None and cost > 0:
+                price = cost + (cost * margin / 100)
+            else:
+                price = float(request.form.get(f'line_items[{i}][unit_price]', 0))
             qty = float(request.form.get(f'line_items[{i}][quantity]', 1))
-            price = float(request.form.get(f'line_items[{i}][unit_price]', 0))
             item_type = request.form.get(f'line_items[{i}][item_type]', 'service')
+            parts_type = request.form.get(f'line_items[{i}][parts_type]', '') or None
+            parts_source = request.form.get(f'line_items[{i}][parts_source]', '') or None
             li = EstimateLineItem(
-                description=desc, quantity=qty, unit_price=price,
-                total=qty * price, item_type=item_type)
+                description=desc, cost=cost, margin=margin,
+                quantity=qty, unit_price=price, total=qty * price,
+                item_type=item_type, parts_type=parts_type, parts_source=parts_source)
             est.line_items.append(li)
             subtotal += li.total
         est.subtotal = subtotal
-        est.tax_amount = subtotal * est.tax_rate
-        est.total = subtotal + est.tax_amount
+        after_discount = subtotal - est.discount_workshop - est.discount_ob
+        est.tax_amount = max(after_discount, 0) * est.tax_rate
+        est.total = max(after_discount, 0) + est.tax_amount
         db.session.add(est)
         db.session.commit()
         flash('Estimate created successfully', 'success')
@@ -89,6 +100,8 @@ def edit_estimate(estimate_id):
         estimate.odometer_reading = request.form.get('odometer_reading', '')
         estimate.notes = request.form.get('notes', '')
         estimate.tax_rate = float(request.form.get('tax_rate', 5)) / 100
+        estimate.discount_workshop = float(request.form.get('discount_workshop', 0))
+        estimate.discount_ob = float(request.form.get('discount_ob', 0))
         valid_until_str = request.form.get('valid_until')
         if valid_until_str:
             estimate.valid_until = datetime.strptime(valid_until_str, '%Y-%m-%d')
@@ -101,17 +114,26 @@ def edit_estimate(estimate_id):
             desc = request.form.get(f'line_items[{i}][description]')
             if not desc:
                 continue
+            cost = request.form.get(f'line_items[{i}][cost]', type=float) or None
+            margin = request.form.get(f'line_items[{i}][margin]', type=float) or None
+            if margin is not None and cost is not None and cost > 0:
+                price = cost + (cost * margin / 100)
+            else:
+                price = float(request.form.get(f'line_items[{i}][unit_price]', 0))
             qty = float(request.form.get(f'line_items[{i}][quantity]', 1))
-            price = float(request.form.get(f'line_items[{i}][unit_price]', 0))
             item_type = request.form.get(f'line_items[{i}][item_type]', 'service')
+            parts_type = request.form.get(f'line_items[{i}][parts_type]', '') or None
+            parts_source = request.form.get(f'line_items[{i}][parts_source]', '') or None
             li = EstimateLineItem(
-                estimate_id=estimate.id, description=desc, quantity=qty,
-                unit_price=price, total=qty * price, item_type=item_type)
+                estimate_id=estimate.id, description=desc, cost=cost, margin=margin,
+                quantity=qty, unit_price=price, total=qty * price,
+                item_type=item_type, parts_type=parts_type, parts_source=parts_source)
             db.session.add(li)
             subtotal += li.total
         estimate.subtotal = subtotal
-        estimate.tax_amount = subtotal * estimate.tax_rate
-        estimate.total = subtotal + estimate.tax_amount
+        after_discount = subtotal - estimate.discount_workshop - estimate.discount_ob
+        estimate.tax_amount = max(after_discount, 0) * estimate.tax_rate
+        estimate.total = max(after_discount, 0) + estimate.tax_amount
         db.session.commit()
         flash('Estimate updated successfully', 'success')
         return redirect(url_for('estimates.view_estimate', estimate_id=estimate.id))
@@ -122,9 +144,10 @@ def edit_estimate(estimate_id):
 def _next_invoice_number():
     prefix = Setting.get('invoice_prefix', 'INV-')
     from app.models import Invoice
-    last = Invoice.query.order_by(Invoice.id.desc()).first()
-    n = (last.id + 1) if last else 1
-    return f"{prefix}{n:06d}"
+    all_nums = [int(i.invoice_number.replace(prefix, '')) for i in Invoice.query.all() if i.invoice_number.startswith(prefix)]
+    highest = max(all_nums) if all_nums else 0
+    n = max(highest + 1, 1009542)
+    return f"{prefix}{n}"
 
 @bp.route('/estimates/<int:estimate_id>/convert', methods=['POST'])
 def convert_to_invoice(estimate_id):
@@ -146,6 +169,8 @@ def convert_to_invoice(estimate_id):
         tax_rate=estimate.tax_rate,
         tax_amount=estimate.tax_amount,
         total=estimate.total,
+        discount_workshop=estimate.discount_workshop or 0,
+        discount_ob=estimate.discount_ob or 0,
         paid_amount=0,
         balance_due=estimate.total,
         status='draft',
@@ -154,6 +179,8 @@ def convert_to_invoice(estimate_id):
     for li in estimate.line_items:
         inv.line_items.append(InvoiceLineItem(
             description=li.description, item_type=li.item_type,
+            parts_type=li.parts_type, parts_source=li.parts_source,
+            cost=li.cost, margin=li.margin,
             quantity=li.quantity, unit_price=li.unit_price, total=li.total))
     estimate.status = 'converted'
     db.session.add(inv)
@@ -184,7 +211,7 @@ def pdf_estimate(estimate_id):
         entity += f"<br/>{c.address}"
     if c.city:
         entity += f"<br/>{c.city}"
-    items = [{'description': li.description, 'item_type': li.item_type, 'quantity': li.quantity, 'unit_price': li.unit_price, 'total': li.total} for li in estimate.line_items]
+    items = [{'description': li.description, 'item_type': li.item_type, 'parts_type': li.parts_type, 'parts_source': li.parts_source, 'quantity': li.quantity, 'unit_price': li.unit_price, 'total': li.total} for li in estimate.line_items]
     date_value = estimate.created_at.strftime('%B %d, %Y')
     due_value = estimate.valid_until.strftime('%B %d, %Y') if estimate.valid_until else None
     buf = build_pdf(
@@ -203,5 +230,10 @@ def pdf_estimate(estimate_id):
         due_label='Valid Until',
         due_value=due_value,
         vehicle_info=vehicle_info,
+        customer_name=c.name,
+        discount_workshop=estimate.discount_workshop or 0,
+        discount_ob=estimate.discount_ob or 0,
     )
-    return send_file(buf, mimetype='application/pdf', as_attachment=False, download_name=f'estimate_{estimate.estimate_number}.pdf')
+    safe_name = _sanitize_filename(c.name).replace(' ', '_')
+    safe_num = _sanitize_filename(estimate.estimate_number)
+    return send_file(buf, mimetype='application/pdf', as_attachment=True, download_name=f'{safe_num}_{safe_name}.pdf')
